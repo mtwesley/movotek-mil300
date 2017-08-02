@@ -40,6 +40,19 @@
 #define CHANNEL_SIM1	0
 #define CHANNEL_SIM2	1
 
+#define TRUE  1
+#define FALSE 0
+
+#define FONT_SMALL   8 * 8
+#define FONT_MEDIUM  8 * 12
+#define FONT_LARGE   16 * 16
+
+#define PAGE_WAITING     0
+#define PAGE_MENU        1
+#define PAGE_ORDER_LIST  2
+#define PAGE_ORDER_MENU  3
+#define PAGE_SETTINGS    4
+
 void DispTimer2(void);
 void vDispTitle(char *mesg);
 void vDisp2(uchar line,char *mesg);
