@@ -43,9 +43,9 @@
 #define TRUE  1
 #define FALSE 0
 
-#define FONT_SMALL   8 * 8
-#define FONT_MEDIUM  8 * 12
-#define FONT_LARGE   16 * 16
+#define FONT_SMALL   8, 16, 0
+#define FONT_MEDIUM  12, 12, 0
+#define FONT_LARGE   16, 16, 0
 
 #define PAGE_WAITING     0
 #define PAGE_MENU        1

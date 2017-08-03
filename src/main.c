@@ -5,6 +5,8 @@
 #include <ctype.h>
 
 #include "public.h"
+#include "logo_128.h"
+#include "logo_384.h"
 
 
 const APP_MSG App_Msg = {
@@ -26,25 +28,39 @@ int main(void) {
 	unsigned char ucKey;
 	unsigned char ucWlsResetFlag;
 
-	Lib_AppInit(); 	 
+	Lib_AppInit();
  
     // clear screen and keyboard
     Lib_LcdCls();
     Lib_LcdClrDotBuf();
     Lib_KbFlush();
 
+	Lib_LcdSetFont(12, 12, 0);
+
+	Lib_LcdCls();
+	Lib_LcdGotoxy(0, 26);
+	Lib_Lcdprintf("  Checking ports... ");
+
     // reset communication ports
     Lib_ComReset(COM1);
     Lib_ComReset(COM2);
     Lib_ComReset(AT_COM);
-    Lib_UsbReset();
+    // Lib_UsbReset(); // FIXME: find the port number for USB
     Wls_Reset();
+
+	Lib_LcdCls();
+	Lib_LcdGotoxy(0, 26);
+	Lib_Lcdprintf(" Checking devices...");
 
     // initialize printer
     if (Lib_PrnInit()) return 1;
 
     // initialize wireless
     if (Wls_Init()) return 1;
+
+	Lib_LcdCls();
+	Lib_LcdGotoxy(0, 26);
+	Lib_Lcdprintf("   Initializing...  ");
 
     // set up environment
     if (Lib_FileExist("EnvFile") < 0) {
@@ -55,19 +71,16 @@ int main(void) {
 		Lib_FilePutEnv("PORT",    "9005");
     }
 
+	// moment of silence for our lost hommies
+	Lib_DelayMs(2000);
+
 	while (TRUE) {
 		Lib_LcdCls();
 		Lib_KbFlush();
-		
-        DispTimer2();
-
-		Lib_LcdPrintxy(0,0*8,0x80,"    Demo-App[v%s.%s]    ",MAJ_VER, MIN_VER);
-		Lib_LcdClrLine(1*8, 8*8);
-		Lib_LcdSetFont(16, 16, 0);
 
         // display page
 		if (page == PAGE_WAITING) {
-			Lib_LcdGotoxy(x, y);
+			Lib_LcdGotoxy(0, 4);
             Lib_LcdDrawLogo(g_Display_logo_128);
 		} else {
 			return 0;
