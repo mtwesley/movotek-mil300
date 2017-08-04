@@ -22,9 +22,59 @@ const APP_MSG App_Msg = {
 	""
 };
 
+// FIXME: Instead of a menu being an array of strings, it should be a struct that contains a constant value for a unique command an a string
+
+const char *Menu[] = {
+    "1: New orders",
+    "2: Pending orders",
+    "3: Picked-up orders",
+    "4: Delivered orders",
+    "5: Settings",
+    NULL
+};
+
+unsigned char Display_Menu(char **menu, int lines) {
+    int len = 0;
+    int scroll = 0;
+    unsigned char ucKey;
+
+    // menu length
+    while (menu[len++] != NULL);
+
+    // scrolling
+    if (len) {
+        int count = 0;
+        char** temp = menu + scroll;
+
+        Lib_LcdCls();
+        Lib_LcdSetFont(FONT_MEDIUM);
+        while (*temp != NULL && count < lines) {
+            Lib_Lcdprintf("%s\n", *temp++);
+            count++;
+        }
+
+        while (TRUE) {
+            if (Lib_KbCheck()) continue;			
+            ucKey = Lib_KbGetCh();
+
+			if (ucKey == KEYUP && scroll < len) {
+				scroll++;
+				break;
+			} else if (ucKey == KEYDOWN && scroll >= 0) {
+				scroll--;
+				break;
+			}
+
+            return ucKey;
+        }
+    }
+}
+
 int main(void) {
 	int iret;
-	int page = PAGE_WAITING;
+	int view = VIEW_WAITING;
+    int scroll = 0;
+    char **curr_menu;
 	unsigned char ucKey;
 	unsigned char ucWlsResetFlag;
 
@@ -35,7 +85,7 @@ int main(void) {
     Lib_LcdClrDotBuf();
     Lib_KbFlush();
 
-	Lib_LcdSetFont(12, 12, 0);
+	Lib_LcdSetFont(FONT_MEDIUM);
 
 	Lib_LcdCls();
 	Lib_LcdGotoxy(0, 26);
@@ -74,14 +124,54 @@ int main(void) {
 	// moment of silence for our lost hommies
 	Lib_DelayMs(2000);
 
+    // intro beeps
+    Lib_Beef(0, 200);
+	Lib_DelayMs(300);
+    Lib_Beef(1, 200);
+	Lib_DelayMs(300);
+    Lib_Beef(2, 200);
+	Lib_DelayMs(300);
+    Lib_Beef(3, 200);
+	Lib_DelayMs(300);
+    Lib_Beef(4, 200);
+	Lib_DelayMs(300);
+    Lib_Beef(5, 200);
+	Lib_DelayMs(300);
+    Lib_Beef(6, 200);
+	Lib_DelayMs(300);
+    Lib_Beef(7, 200);
+	Lib_DelayMs(300);
+
 	while (TRUE) {
 		Lib_LcdCls();
 		Lib_KbFlush();
 
         // display page
-		if (page == PAGE_WAITING) {
+		if (page == VIEW_WAITING) {
 			Lib_LcdGotoxy(0, 4);
             Lib_LcdDrawLogo(g_Display_logo_128);
+            Lib_LcdGotoxy(0, 64 - 12);
+            Lib_LcdSetFont(FONT_SMALL);
+            Lib_Lcdprintf("Press ESC for menu");
+            switch (Display_Menu(Menu, 4)) {
+                case KEYCANCEL:
+                    return 0;
+                default:
+                    break;
+            }
+
+		} else if (page == VIEW_MENU) {
+            Lib_LcdSetFont(FONT_MEDIUM);
+
+		} else if (page == VIEW_ORDER_LIST) {
+			return 0;
+
+		} else if (page == VIEW_ORDER_MENU) {
+			return 0;
+
+		} else if (page == VIEW_MENU) {
+			return 0;
+
 		} else {
 			return 0;
 		}
@@ -98,7 +188,7 @@ int main(void) {
 		}
 
         // page actions
-        if (page == PAGE_WAITING) {
+        if (page == VIEW_WAITING) {
 			switch(ucKey) {
 			default:
 				break; 
