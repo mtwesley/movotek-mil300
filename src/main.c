@@ -30,6 +30,7 @@ char *Menu[] = {
     "3: Picked-up orders",
     "4: Delivered orders",
     "5: Settings",
+    "6: Logout",
     NULL
 };
 
@@ -38,10 +39,10 @@ void Display_Loading(int level) {
 	Lib_LcdCls();
 	Lib_LcdGotoxy(0, 26);
 	
-	if (level <= 3) Lib_Lcdprintf("       Loading      ");
+	if (level <= 3)      Lib_Lcdprintf("       Loading      ");
 	else if (level <= 6) Lib_Lcdprintf("      Loading...    ");
 	else if (level <= 9) Lib_Lcdprintf("    Loading......   ");
-	else if (level > 9) Lib_Lcdprintf("         OK         ");
+	else if (level > 9)  Lib_Lcdprintf("   Loading......... ");
 }
 
 unsigned char Display_Waiting(void) {
@@ -99,21 +100,30 @@ unsigned char Display_Menu(char **menu, int lines) {
 
 		Lib_KbFlush();
         while (TRUE) {
-            if (Lib_KbCheck()) continue;
+			int breakout = FALSE;
 
+            if (Lib_KbCheck()) continue;
             ucKey = Lib_KbGetCh();
+
 			switch (ucKey) {
-				case KEYUP:
-					if ((scroll + lines) < len) scroll++;
+				case KEYDOWN:
+					if ((scroll + lines) < len) {
+						scroll++;
+						breakout = TRUE;
+					}
 					break;
 
-				case KEYDOWN:
-					if (scroll > 0) scroll--;
+				case KEYUP:
+					if (scroll > 0) {
+						scroll--;
+						breakout = TRUE;
+					}
 					break;
 				
 				default:
 					return ucKey;
 			}
+			if (breakout) break;
         }
     }
 	return 1;
@@ -145,12 +155,12 @@ int main(void) {
     Wls_Reset();
 
     // initialize printer
-	Display_Loading(6);
 	if (Lib_PrnInit()) return 1;
+	Display_Loading(6);
 
     // initialize wireless
-	Display_Loading(9);
     if (Wls_Init()) return 1;
+	Display_Loading(9);
 
     // set up environment
     if (Lib_FileExist("EnvFile") < 0) {
@@ -162,8 +172,8 @@ int main(void) {
     }
 
 	// moment of silence for our lost hommies
-	Display_Loading(10);
 	Lib_DelayMs(1000);
+	Display_Loading(10);
 
     // intro beeps
     Lib_Beef(0, 200);
