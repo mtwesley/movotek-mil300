@@ -24,7 +24,7 @@ const APP_MSG App_Msg = {
 
 // FIXME: Instead of a menu being an array of strings, it should be a struct that contains a constant value for a unique command an a string
 
-const char *Menu[] = {
+char *Menu[] = {
     "1: New orders",
     "2: Pending orders",
     "3: Picked-up orders",
@@ -32,6 +32,51 @@ const char *Menu[] = {
     "5: Settings",
     NULL
 };
+
+void Display_Loading(int level) {
+	Lib_LcdSetFont(FONT_MEDIUM);
+	Lib_LcdCls();
+	Lib_LcdGotoxy(0, 26);
+	
+	if (level < 3) Lib_Lcdprintf("      Loading       ");
+	else if (level < 6) Lib_Lcdprintf("     Loading...     ");
+	else if (level < 9) Lib_Lcdprintf("   Loading......    ");
+	else if (level > 10) Lib_Lcdprintf("        OK         ");
+}
+
+unsigned char Display_Waiting(void) {
+    unsigned char ucKey;
+
+	Lib_LcdCls();
+
+	// draw logo
+	Lib_LcdGotoxy(0, 0);
+	Lib_LcdDrawLogo(g_Display_logo_128);
+	Lib_LcdGotoxy(0, 64 - 14);
+
+	// draw text
+	Lib_LcdSetFont(FONT_SMALL);
+	Lib_Lcdprintf("  Press ESC for menu");
+
+	// wait for OK, ESC, CANCEL, or MENU
+	Lib_KbFlush();
+	while (TRUE) {
+		if (Lib_KbCheck()) continue;
+
+		ucKey = Lib_KbGetCh();
+		switch (ucKey) {
+			case KEYCANCEL:
+			case KEYCLEAR:
+			case KEYFN:
+			case KEYMENU:
+			case KEYENTER:
+			case KEYBACKSPACE:
+				return ucKey;
+		}
+	}
+
+	return 1;
+}
 
 unsigned char Display_Menu(char **menu, int lines) {
     int len = 0;
@@ -42,9 +87,9 @@ unsigned char Display_Menu(char **menu, int lines) {
     while (menu[len++] != NULL);
 
     // scrolling
-    if (len) {
+    while (len) {
         int count = 0;
-        char** temp = menu + scroll;
+        char** temp = (menu + scroll);
 
         Lib_LcdCls();
         Lib_LcdSetFont(FONT_MEDIUM);
@@ -53,21 +98,23 @@ unsigned char Display_Menu(char **menu, int lines) {
             count++;
         }
 
+		Lib_KbFlush();
         while (TRUE) {
-            if (Lib_KbCheck()) continue;			
-            ucKey = Lib_KbGetCh();
+            if (Lib_KbCheck()) continue;
 
-			if (ucKey == KEYUP && scroll < len) {
+            ucKey = Lib_KbGetCh();
+			if (ucKey == KEYUP && (scroll + lines) < len) {
 				scroll++;
 				break;
-			} else if (ucKey == KEYDOWN && scroll >= 0) {
+			} else if (ucKey == KEYDOWN && scroll > 0) {
 				scroll--;
 				break;
 			}
-
             return ucKey;
         }
     }
+
+	return 1;
 }
 
 int main(void) {
@@ -85,32 +132,24 @@ int main(void) {
     Lib_LcdClrDotBuf();
     Lib_KbFlush();
 
-	Lib_LcdSetFont(FONT_MEDIUM);
-
-	Lib_LcdCls();
-	Lib_LcdGotoxy(0, 26);
-	Lib_Lcdprintf("  Checking ports... ");
+	Display_Loading(0);
 
     // reset communication ports
     Lib_ComReset(COM1);
     Lib_ComReset(COM2);
     Lib_ComReset(AT_COM);
+	Display_Loading(3);
+
     // Lib_UsbReset(); // FIXME: find the port number for USB
     Wls_Reset();
 
-	Lib_LcdCls();
-	Lib_LcdGotoxy(0, 26);
-	Lib_Lcdprintf(" Checking devices...");
-
     // initialize printer
-    if (Lib_PrnInit()) return 1;
+	Display_Loading(6);
+	if (Lib_PrnInit()) return 1;
 
     // initialize wireless
+	Display_Loading(9);
     if (Wls_Init()) return 1;
-
-	Lib_LcdCls();
-	Lib_LcdGotoxy(0, 26);
-	Lib_Lcdprintf("   Initializing...  ");
 
     // set up environment
     if (Lib_FileExist("EnvFile") < 0) {
@@ -122,77 +161,48 @@ int main(void) {
     }
 
 	// moment of silence for our lost hommies
-	Lib_DelayMs(2000);
+	Display_Loading(10);
+	Lib_DelayMs(1000);
 
     // intro beeps
     Lib_Beef(0, 200);
-	Lib_DelayMs(300);
+	Lib_DelayMs(100);
     Lib_Beef(1, 200);
-	Lib_DelayMs(300);
+	Lib_DelayMs(100);
     Lib_Beef(2, 200);
-	Lib_DelayMs(300);
+	Lib_DelayMs(100);
     Lib_Beef(3, 200);
-	Lib_DelayMs(300);
+	Lib_DelayMs(100);
     Lib_Beef(4, 200);
-	Lib_DelayMs(300);
+	Lib_DelayMs(100);
     Lib_Beef(5, 200);
-	Lib_DelayMs(300);
-    Lib_Beef(6, 200);
-	Lib_DelayMs(300);
-    Lib_Beef(7, 200);
-	Lib_DelayMs(300);
 
 	while (TRUE) {
 		Lib_LcdCls();
 		Lib_KbFlush();
 
         // display page
-		if (page == VIEW_WAITING) {
-			Lib_LcdGotoxy(0, 4);
-            Lib_LcdDrawLogo(g_Display_logo_128);
-            Lib_LcdGotoxy(0, 64 - 12);
-            Lib_LcdSetFont(FONT_SMALL);
-            Lib_Lcdprintf("Press ESC for menu");
-            switch (Display_Menu(Menu, 4)) {
-                case KEYCANCEL:
-                    return 0;
-                default:
-                    break;
-            }
+		if (view == VIEW_WAITING) {
+			if (Display_Waiting()) view = VIEW_MENU;
+			else return 0;
 
-		} else if (page == VIEW_MENU) {
-            Lib_LcdSetFont(FONT_MEDIUM);
+		} else if (view = VIEW_MENU) {
+			switch (Display_Menu(Menu, 4)) {
+				case KEYCANCEL:
+					return 0;
 
-		} else if (page == VIEW_ORDER_LIST) {
-			return 0;
-
-		} else if (page == VIEW_ORDER_MENU) {
-			return 0;
-
-		} else if (page == VIEW_MENU) {
-			return 0;
-
-		} else {
-			return 0;
-		}
-		
-        // wait for key input
-		while (1) {
-
-			if (Lib_KbCheck()) continue;
-			ucKey = Lib_KbGetCh();
-
-			if (!ucKey) continue;
-
-			break;
-		}
-
-        // page actions
-        if (page == VIEW_WAITING) {
-			switch(ucKey) {
-			default:
-				break; 
+				default:
+					break;
 			}
+
+		} else if (view = VIEW_ORDER) {
+			return 0;
+
+		} else if (view = VIEW_ORDER_LIST) {
+			return 0;
+
+		} else if (view = VIEW_SETTINGS) {
+			return 0;
 		}
 	}
 	return 0;			

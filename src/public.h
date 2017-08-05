@@ -49,8 +49,8 @@
 
 #define VIEW_WAITING     0
 #define VIEW_MENU        1
-#define VIEW_ORDER_LIST  2
-#define VIEW_ORDER       3
+#define VIEW_ORDER       2
+#define VIEW_ORDER_LIST  3
 #define VIEW_SETTINGS    4
 
 void DispTimer2(void);
