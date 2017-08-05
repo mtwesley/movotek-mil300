@@ -38,10 +38,10 @@ void Display_Loading(int level) {
 	Lib_LcdCls();
 	Lib_LcdGotoxy(0, 26);
 	
-	if (level < 3) Lib_Lcdprintf("      Loading       ");
-	else if (level < 6) Lib_Lcdprintf("     Loading...     ");
-	else if (level < 9) Lib_Lcdprintf("   Loading......    ");
-	else if (level > 10) Lib_Lcdprintf("        OK         ");
+	if (level <= 3) Lib_Lcdprintf("       Loading      ");
+	else if (level <= 6) Lib_Lcdprintf("      Loading...    ");
+	else if (level <= 9) Lib_Lcdprintf("    Loading......   ");
+	else if (level > 9) Lib_Lcdprintf("         OK         ");
 }
 
 unsigned char Display_Waiting(void) {
@@ -74,7 +74,6 @@ unsigned char Display_Waiting(void) {
 				return ucKey;
 		}
 	}
-
 	return 1;
 }
 
@@ -84,7 +83,7 @@ unsigned char Display_Menu(char **menu, int lines) {
     unsigned char ucKey;
 
     // menu length
-    while (menu[len++] != NULL);
+    while (menu[len++] != NULL); len--;	
 
     // scrolling
     while (len) {
@@ -103,17 +102,20 @@ unsigned char Display_Menu(char **menu, int lines) {
             if (Lib_KbCheck()) continue;
 
             ucKey = Lib_KbGetCh();
-			if (ucKey == KEYUP && (scroll + lines) < len) {
-				scroll++;
-				break;
-			} else if (ucKey == KEYDOWN && scroll > 0) {
-				scroll--;
-				break;
+			switch (ucKey) {
+				case KEYUP:
+					if ((scroll + lines) < len) scroll++;
+					break;
+
+				case KEYDOWN:
+					if (scroll > 0) scroll--;
+					break;
+				
+				default:
+					return ucKey;
 			}
-            return ucKey;
         }
     }
-
 	return 1;
 }
 
@@ -131,7 +133,6 @@ int main(void) {
     Lib_LcdCls();
     Lib_LcdClrDotBuf();
     Lib_KbFlush();
-
 	Display_Loading(0);
 
     // reset communication ports
@@ -188,24 +189,32 @@ int main(void) {
 
 		} else if (view = VIEW_MENU) {
 			switch (Display_Menu(Menu, 4)) {
-				case KEYCANCEL:
-					return 0;
+				case KEY1:
+				case KEY2:
+				case KEY3:
+				case KEY4:
+				case KEY5:
+				case KEY6:
+				case KEY7:
+				case KEY8:
+				case KEY9:
+				case KEY0:
 
+				case KEYCANCEL:
 				default:
-					break;
+					view = VIEW_WAITING;
+					continue;
 			}
 
 		} else if (view = VIEW_ORDER) {
-			return 0;
 
 		} else if (view = VIEW_ORDER_LIST) {
-			return 0;
 
 		} else if (view = VIEW_SETTINGS) {
-			return 0;
+
 		}
 	}
-	return 0;			
+	return 1;			
 }
 
 
