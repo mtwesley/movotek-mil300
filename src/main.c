@@ -20,12 +20,6 @@
 #define STATUS_PICKED_UP 3
 #define STATUS_DELIVERED 4
 
-int view = VIEW_WAITING;
-int status = STATUS_UNKNOWN;
-int scroll = 0;
-char **curr_menu;
-unsigned char ucKey;
-
 const APP_MSG App_Msg = {
 	"COOKSHOP.biz",
 	"0.1", 0, 0, 0,
@@ -80,11 +74,11 @@ char *Settings_Menu[] = {
 };
 
 char *Sample_Order_List[] = {
-    "[ ] CS146001 ",
-    "[*] CS146002 ",
-    "[ ] CS146003 ",
-    "[ ] CS146003 ",
-    "[ ] CS146005 ",
+    "CS146001",
+    "CS146002",
+    "CS146003",
+    "CS146003",
+    "CS146005",
     NULL
 };
 
@@ -231,18 +225,21 @@ int Display_List(char **list, int lines) {
     int len = 0;
     int scroll = 0;
 
+	Lib_LcdGotoxy(0, 12);
+
     // list length
     while (list[len++] != NULL); len--;	
 
     // scrolling
     while (len) {
         int count = 0;
-        char** temp = (list + scroll);
+        char** temp = (list + ((scroll / lines) * lines));
 
         Lib_LcdCls();
         Lib_LcdSetFont(FONT_MEDIUM);
         while (*temp != NULL && count < lines) {
-            Lib_Lcdprintf("%s\n", *temp++);
+            if (count == (scroll % lines)) Lib_Lcdprintf("[*] %s\n", *temp++);
+            else (count == (scroll % lines)) Lib_Lcdprintf("[ ] %s\n", *temp++);
             count++;
         }
 
@@ -268,8 +265,12 @@ int Display_List(char **list, int lines) {
 					}
 					break;
 				
+                case KEYENTER:
+                case KEYOK:
+                    return scroll;
+                    
 				default:
-					return ucKey;
+					continue;
 			}
 			if (breakout) break;
         }
@@ -278,11 +279,8 @@ int Display_List(char **list, int lines) {
 }
 
 int main(void) {
-	// int view = VIEW_WAITING;
-    // int status = STATUS_UNKNOWN;
-    // int scroll = 0;
-    // char **curr_menu;
-	// unsigned char ucKey;
+    int view = VIEW_WAITING;
+    int status = STATUS_UNKNOWN;
 
 	Lib_AppInit();
  
