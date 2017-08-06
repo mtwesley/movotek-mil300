@@ -43,9 +43,12 @@
 #define TRUE  1
 #define FALSE 0
 
-#define FONT_SMALL   8, 16, 0
-#define FONT_MEDIUM  12, 12, 0
-#define FONT_LARGE   16, 16, 0
+#define LCD_FONT_SMALL   8, 16, 0
+#define LCD_FONT_MEDIUM  12, 12, 0
+#define LCD_FONT_LARGE   16, 16, 0
+
+#define PRN_FONT_MEDIUM  16, 16, 0
+#define PRN_FONT_LARGE   24, 24, 0
 
 void DispTimer2(void);
 void vDispTitle(char *mesg);

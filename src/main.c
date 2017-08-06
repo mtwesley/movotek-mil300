@@ -91,7 +91,7 @@ void Clear_Content(void) {
 }
 
 void Display_Loading(int level) {
-	Lib_LcdSetFont(FONT_MEDIUM);
+	Lib_LcdSetFont(LCD_FONT_MEDIUM);
 	Lib_LcdGotoxy(0, 26);
 	
 	if (level == 0)      Lib_Lcdprintf("    Loading (0%%)     ");
@@ -102,8 +102,6 @@ void Display_Loading(int level) {
 }
 
 void Display_Topbar(void) {
-	Clear_Topbar();
-
     int x, y;
     for (x = 0; x < 128; x++) {
 		for (y = 0; y < 12; y++) {
@@ -124,8 +122,11 @@ void Display_Topbar(void) {
 	minute = (buff[4] >> 4) * 10 + (buff[4] & 0x0f);
 	// second = (buff[5] >> 4) * 10 + (buff[5] & 0x0f);
     // week   = (buff[6] >> 4) * 10 + (buff[6] & 0x0f);
-
     // if (buff[0] <= 0x49) year += 100;
+
+    Clear_Topbar();
+    Lib_LcdSetFont(LCD_FONT_SMALL);
+    Lib_LcdGotoxy(0, 12);
 
     if (hour == 0)       Lib_LcdPrintxy(40, 2, 0x80, "12:%02d AM", minute);
     if (hour == 12)      Lib_LcdPrintxy(40, 2, 0x80, "12:%02d PM", minute);
@@ -137,15 +138,14 @@ void Display_Topbar(void) {
 unsigned char Display_Waiting(void) {
     unsigned char ucKey;
 
-	Lib_LcdCls();
-
 	// draw logo
+    Lib_LcdCls();
 	Lib_LcdGotoxy(0, 0);
 	Lib_LcdDrawLogo(g_Display_logo_128);
 	Lib_LcdGotoxy(0, 64 - 14);
 
 	// draw text
-	Lib_LcdSetFont(FONT_SMALL);
+	Lib_LcdSetFont(LCD_FONT_SMALL);
 	Lib_Lcdprintf("  Press OK for menu");
 
 	// wait for OK, ESC, CANCEL, or MENU
@@ -173,8 +173,6 @@ unsigned char Display_Menu(char **menu, int lines) {
     int scroll = 0;
     unsigned char ucKey;
 
-	Lib_LcdGotoxy(0, 12);
-
     // menu length
     while (menu[len++] != NULL); len--;	
 
@@ -184,7 +182,9 @@ unsigned char Display_Menu(char **menu, int lines) {
         char** temp = (menu + scroll);
 
         Clear_Content();
-        Lib_LcdSetFont(FONT_MEDIUM);
+        Lib_LcdSetFont(LCD_FONT_MEDIUM);
+        Lib_LcdGotoxy(0, 12);
+        
         while (*temp != NULL && count < lines) {
             Lib_Lcdprintf("%s\n", *temp++);
             count++;
@@ -226,8 +226,6 @@ int Display_List(char **list, int lines) {
     int scroll = 0;
     unsigned char ucKey;
 
-	Lib_LcdGotoxy(0, 12);
-
     // list length
     while (list[len++] != NULL); len--;	
 
@@ -237,7 +235,9 @@ int Display_List(char **list, int lines) {
         char** temp = (list + ((scroll / lines) * lines));
 
         Clear_Content();
-        Lib_LcdSetFont(FONT_MEDIUM);
+        Lib_LcdSetFont(LCD_FONT_MEDIUM);
+        Lib_LcdGotoxy(0, 12);
+        
         while (*temp != NULL && count < lines) {
             if (count == (scroll % lines)) Lib_Lcdprintf("[*] %s\n", *temp++);
             else Lib_Lcdprintf("[ ] %s\n", *temp++);
@@ -284,6 +284,88 @@ int Display_List(char **list, int lines) {
         }
     }
 	return 1;
+}
+
+int Display_Confirm(char *message, char *yes, char *no) {
+    Clear_Content();
+    
+    // print message
+    Lib_LcdSetFont(LCD_FONT_MEDIUM);
+    Lib_LcdGotoxy(0, 12);
+    Lib_Lcdprintf("%s\n", message);
+
+    // print confirmation
+    Lib_LcdGotoxy(0, 12 * 3);
+    Lib_Lcdprintf("[YES] %s\n", yes);
+    Lib_Lcdprintf(" [NO] %s\n", no);
+
+    Lib_KbFlush();
+    while (TRUE) {
+        int breakout = FALSE;
+
+        if (Lib_KbCheck()) continue;
+        ucKey = Lib_KbGetCh();
+
+        switch (ucKey) {
+            case KEYOK:
+            case KEYENTER:
+                return 1;
+
+            case KEYCANCEL:            
+            case KEYBACKSPACE:
+            case KEYCLEAR:
+                return 0;
+            
+            default:
+                continue;
+        }
+        if (breakout) break;
+    }
+    return 0;
+}
+
+void Display_Notice(char *message) {
+    Clear_Content();
+    
+    // print message
+    Lib_LcdSetFont(LCD_FONT_MEDIUM);
+    Lib_LcdGotoxy(0, 12);
+    Lib_Lcdprintf("%s\n", message);
+
+    // print confirmation
+	Lib_LcdSetFont(LCD_FONT_SMALL);
+	Lib_Lcdprintf(" Press OK to continue");
+
+    Lib_KbFlush();
+    while (TRUE) {
+        if (Lib_KbCheck()) continue;
+        return;
+    }
+}
+
+void Print_Order(char *order) {
+    
+    Lib_PrnStr("\n\n");
+
+    Lib_PrnLogo(g_Display_logo_384);
+
+    Lib_PrnSetFont(PRN_FONT_LARGE);
+
+    Lib_PrnStr("\n\n");
+    Lib_PrnStr("ABCDEFGHIJKLMNOPQRSTUVWXYZ\n");
+    Lib_PrnStr("abcdefghijklmnopqrstuvwxyz\n");
+    Lib_PrnStr("1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890\n");
+    Lib_PrnStr("\n\n");
+
+    Lib_PrnSetFont(PRN_FONT_MEDIUM);
+
+    Lib_PrnStr("\n\n");
+    Lib_PrnStr("ABCDEFGHIJKLMNOPQRSTUVWXYZ\n");
+    Lib_PrnStr("abcdefghijklmnopqrstuvwxyz\n");
+    Lib_PrnStr("1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890\n");
+    Lib_PrnStr("\n\n");
+
+    Lib_PrnStart();
 }
 
 int main(void) {
@@ -411,9 +493,31 @@ int main(void) {
             if (status == STATUS_NEW) {
                 switch (Display_Menu(New_Order_Menu, 4)) {
                     case KEY1:
+                        if (Display_Confirm("Confirm acceptance of this order?", "Yes", "No")) {
+                            Display_Notice("Order accepted.");
+                            view = VIEW_ORDER_LIST;
+                        }
+                        break;
+
                     case KEY2:
+                        if (Display_Confirm("Request to make changes to this order?", "Yes", "No")) {
+                            Display_Notice("Order changes requested.");
+                            view = VIEW_ORDER_LIST;
+                        }
+                        break;
+                    
                     case KEY3:
+                        if (Display_Confirm("Confirm rejection of this order?", "Yes", "No")) {
+                            Display_Notice("Order rejected.");
+                            view = VIEW_ORDER_LIST;
+                        }
+                        break;
+                    
                     case KEY4:
+                        break;
+
+                    case KEY5:
+                        Print_Order("CS123456");
                         break;
 
                     case KEYCANCEL:
@@ -428,11 +532,26 @@ int main(void) {
             } else if (status == STATUS_PENDING) {
                 switch (Display_Menu(Pending_Order_Menu, 4)) {
                     case KEY1:
+                        if (Display_Confirm("Request to make changes to this order?", "Yes", "No")) {
+                            Display_Notice("Order changes requested.");
+                            view = VIEW_ORDER_LIST;
+                        }
+                        break;
+                    
                     case KEY2:
+                        if (Display_Confirm("Confirm cancellation of this order?", "Yes", "No")) {
+                            Display_Notice("Order cancelled.");
+                            view = VIEW_ORDER_LIST;
+                        }
+                        break;
+                    
                     case KEY3:
-                    case KEY4:
                         break;
 
+                    case KEY4:
+                        Print_Order("CS123456");
+                        break;
+                        
                     case KEYCANCEL:
                     case KEYBACKSPACE:
                         view = VIEW_ORDER_LIST;
@@ -442,31 +561,15 @@ int main(void) {
                         view = VIEW_ORDER;
                 }
             
-            } else if (status == STATUS_PICKED_UP) {
+            } else if (status == STATUS_PICKED_UP || status == STATUS_DELIVERED) {
                 switch (Display_Menu(Non_Pending_Order_Menu, 4)) {
                     case KEY1:
+                        break;
+
                     case KEY2:
-                    case KEY3:
-                    case KEY4:
+                        Print_Order("CS123456");
                         break;
-
-                    case KEYCANCEL:
-                    case KEYBACKSPACE:
-                        view = VIEW_ORDER_LIST;
-                        break;
-
-                    default:
-                        view = VIEW_ORDER;
-                }
-            
-            } else if (status == STATUS_DELIVERED) {
-                switch (Display_Menu(Non_Pending_Order_Menu, 4)) {
-                    case KEY1:
-                    case KEY2:
-                    case KEY3:
-                    case KEY4:
-                        break;
-
+                        
                     case KEYCANCEL:
                     case KEYBACKSPACE:
                         view = VIEW_ORDER_LIST;
