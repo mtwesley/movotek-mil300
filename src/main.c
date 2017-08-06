@@ -77,11 +77,10 @@ char *Sample_Order_List[] = {
     "CS146001",
     "CS146002",
     "CS146003",
-    "CS146003",
+    "CS146004",
     "CS146005",
     NULL
 };
-
 
 void Clear_Topbar(void) {
     Lib_LcdClrLine(0, 11);
@@ -95,7 +94,8 @@ void Display_Loading(int level) {
 	Lib_LcdSetFont(FONT_MEDIUM);
 	Lib_LcdGotoxy(0, 26);
 	
-	if (level <= 3)      Lib_Lcdprintf("    Loading (25%%)    ");
+	if (level == 0)      Lib_Lcdprintf("    Loading (0%%)     ");
+	else if (level <= 3) Lib_Lcdprintf("    Loading (25%%)    ");
 	else if (level <= 6) Lib_Lcdprintf("    Loading (50%%)    ");
 	else if (level <= 9) Lib_Lcdprintf("    Loading (75%%)    ");
 	else if (level > 9)  Lib_Lcdprintf("    Loading (100%%)   ");
@@ -158,8 +158,8 @@ unsigned char Display_Waiting(void) {
 			// case KEYCANCEL:
 			// case KEYCLEAR:
 			// case KEYFN:
-			// case KEYMENU:
 			// case KEYBACKSPACE:
+			case KEYMENU:
 			case KEYENTER:
             case KEYOK:
 				return ucKey;
@@ -224,6 +224,7 @@ unsigned char Display_Menu(char **menu, int lines) {
 int Display_List(char **list, int lines) {
     int len = 0;
     int scroll = 0;
+    unsigned char ucKey;
 
 	Lib_LcdGotoxy(0, 12);
 
@@ -235,11 +236,11 @@ int Display_List(char **list, int lines) {
         int count = 0;
         char** temp = (list + ((scroll / lines) * lines));
 
-        Lib_LcdCls();
+        Clear_Content();
         Lib_LcdSetFont(FONT_MEDIUM);
         while (*temp != NULL && count < lines) {
             if (count == (scroll % lines)) Lib_Lcdprintf("[*] %s\n", *temp++);
-            else (count == (scroll % lines)) Lib_Lcdprintf("[ ] %s\n", *temp++);
+            else Lib_Lcdprintf("[ ] %s\n", *temp++);
             count++;
         }
 
@@ -252,7 +253,7 @@ int Display_List(char **list, int lines) {
 
 			switch (ucKey) {
 				case KEYDOWN:
-					if ((scroll + lines) < len) {
+					if (scroll < (len - 1)) {
 						scroll++;
 						breakout = TRUE;
 					}
@@ -268,7 +269,14 @@ int Display_List(char **list, int lines) {
                 case KEYENTER:
                 case KEYOK:
                     return scroll;
-                    
+                
+				case KEYCANCEL:
+				case KEYMENU:
+				// case KEYCLEAR:
+				// case KEYBACKSPACE:
+				// case KEYFN:
+					return ucKey;
+
 				default:
 					continue;
 			}
@@ -288,26 +296,31 @@ int main(void) {
     Lib_LcdCls();
     Lib_LcdClrDotBuf();
     Lib_KbFlush();
+
 	Display_Loading(0);
+	Lib_DelayMs(1000);
 
     // reset communication ports
+ 	Display_Loading(3);
     Lib_ComReset(COM1);
     Lib_ComReset(COM2);
     Lib_ComReset(AT_COM);
-	Display_Loading(3);
-
     // Lib_UsbReset(); // FIXME: find the port number for USB
     Wls_Reset();
-	Display_Loading(6);
 
-    // initialize printer
-	if (Lib_PrnInit()) return 1;
-	Display_Loading(9);
+ 	Display_Loading(6);
+	Lib_DelayMs(1000);
 
     // initialize wireless
     if (Wls_Init()) return 1;
 
-    // set up environment
+    // initialize printer
+	if (Lib_PrnInit()) return 1;
+
+  	Display_Loading(9);
+	Lib_DelayMs(1000);
+
+   // set up environment
     if (Lib_FileExist("EnvFile") < 0) {
 		Lib_FilePutEnv("DIALNUM", "CMNET");
 		Lib_FilePutEnv("USERID",  "card");
@@ -315,10 +328,6 @@ int main(void) {
 		Lib_FilePutEnv("IP",      "");
 		Lib_FilePutEnv("PORT",    "9005");
     }
-
-	// moment of silence for our lost hommies
-	Lib_DelayMs(1000);
-	Display_Loading(10);
 
     // intro beeps
 	Lib_DelayMs(100);
@@ -336,6 +345,10 @@ int main(void) {
     Lib_Beef(5, 200);
 	Lib_DelayMs(100);
     Lib_Beef(6, 200);
+
+	// moment of silence for our lost hommies
+	Display_Loading(10);
+	Lib_DelayMs(1000);
 
 	while (TRUE) {
 		Lib_LcdCls();
@@ -379,19 +392,18 @@ int main(void) {
 
 		} else if (view == VIEW_ORDER_LIST) {
 			Display_Topbar();
-            switch (Display_Menu(Sample_Order_List, 4)) {
-                case KEYENTER:
-                    view = VIEW_ORDER;
-                    break;
-
+			switch (Display_List(Sample_Order_List, 4)) {
 				case KEYCANCEL:
-                case KEYBACKSPACE:
                 case KEYMENU:
                     view = VIEW_MAIN;
                     break;
 
 				default:
-					view = VIEW_ORDER_LIST;
+					// FIXME: first check if it is a number and there exists
+					// an order with that number
+
+					// order = (int) ucKey;
+					view = VIEW_ORDER;
 			}
 
 		} else if (view == VIEW_ORDER) {
@@ -470,7 +482,7 @@ int main(void) {
 			Display_Topbar();
             switch (Display_Menu(Settings_Menu, 4)) {
 				default:
-					view = VIEW_ORDER_LIST;
+					view = VIEW_MAIN;
 			}
 		}
 	}
