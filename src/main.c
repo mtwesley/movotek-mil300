@@ -29,7 +29,8 @@ const APP_MSG App_Msg = {
 	"", 0, ""
 };
 
-// FIXME: Instead of a menu being an array of strings, it should be a struct that contains a constant value for a unique command an a string
+// FIXME: Instead of a menu being an array of strings, it should be a struct 
+// that contains a constant value for a unique command an a string
 
 char *Main_Menu[] = {
     "[1] New orders",
@@ -91,6 +92,16 @@ void Clear_Content(void) {
     Lib_LcdClrLine(12, 63);
 }
 
+void Display_Loading(int level) {
+	Lib_LcdSetFont(FONT_MEDIUM);
+	Lib_LcdGotoxy(0, 26);
+	
+	if (level <= 3)      Lib_Lcdprintf("    Loading (25%%)    ");
+	else if (level <= 6) Lib_Lcdprintf("    Loading (50%%)    ");
+	else if (level <= 9) Lib_Lcdprintf("    Loading (75%%)    ");
+	else if (level > 9)  Lib_Lcdprintf("    Loading (100%%)   ");
+}
+
 void Display_Topbar(void) {
     // darken background
     for (x = 0; x < 128; x++) {
@@ -122,16 +133,6 @@ void Display_Topbar(void) {
     else if (hour < 12)  Lib_LcdPrintxy(40, 2, 1, "%02d:%02d AM", hour, minute);
     else if (hour > 12)  Lib_LcdPrintxy(40, 2, 1, "%02d:%02d PM", hour - 12, minute);
 
-}
-
-void Display_Loading(int level) {
-	Lib_LcdSetFont(FONT_MEDIUM);
-	Lib_LcdGotoxy(0, 26);
-	
-	if (level <= 3)      Lib_Lcdprintf("       Loading      ");
-	else if (level <= 6) Lib_Lcdprintf("      Loading...    ");
-	else if (level <= 9) Lib_Lcdprintf("    Loading......   ");
-	else if (level > 9)  Lib_Lcdprintf("   Loading......... ");
 }
 
 unsigned char Display_Waiting(void) {
@@ -180,6 +181,56 @@ unsigned char Display_Menu(char **menu, int lines) {
     while (len) {
         int count = 0;
         char** temp = (menu + scroll);
+
+        Lib_LcdCls();
+        Lib_LcdSetFont(FONT_MEDIUM);
+        while (*temp != NULL && count < lines) {
+            Lib_Lcdprintf("%s\n", *temp++);
+            count++;
+        }
+
+		Lib_KbFlush();
+        while (TRUE) {
+			int breakout = FALSE;
+
+            if (Lib_KbCheck()) continue;
+            ucKey = Lib_KbGetCh();
+
+			switch (ucKey) {
+				case KEYDOWN:
+					if ((scroll + lines) < len) {
+						scroll++;
+						breakout = TRUE;
+					}
+					break;
+
+				case KEYUP:
+					if (scroll > 0) {
+						scroll--;
+						breakout = TRUE;
+					}
+					break;
+				
+				default:
+					return ucKey;
+			}
+			if (breakout) break;
+        }
+    }
+	return 1;
+}
+
+int Display_List(char **list, int lines) {
+    int len = 0;
+    int scroll = 0;
+
+    // list length
+    while (list[len++] != NULL); len--;	
+
+    // scrolling
+    while (len) {
+        int count = 0;
+        char** temp = (list + scroll);
 
         Lib_LcdCls();
         Lib_LcdSetFont(FONT_MEDIUM);
