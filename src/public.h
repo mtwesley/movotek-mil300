@@ -47,12 +47,6 @@
 #define FONT_MEDIUM  12, 12, 0
 #define FONT_LARGE   16, 16, 0
 
-#define VIEW_WAITING     0
-#define VIEW_MENU        1
-#define VIEW_ORDER       2
-#define VIEW_ORDER_LIST  3
-#define VIEW_SETTINGS    4
-
 void DispTimer2(void);
 void vDispTitle(char *mesg);
 void vDisp2(uchar line,char *mesg);
