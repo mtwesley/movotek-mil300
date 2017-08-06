@@ -20,6 +20,11 @@
 #define STATUS_PICKED_UP 3
 #define STATUS_DELIVERED 4
 
+int view = VIEW_WAITING;
+int status = STATUS_UNKNOWN;
+int scroll = 0;
+char **curr_menu;
+unsigned char ucKey;
 
 const APP_MSG App_Msg = {
 	"COOKSHOP.biz",
@@ -92,7 +97,9 @@ void Clear_Content(void) {
 }
 
 void Display_Topbar(void) {
-    // darken background
+	Clear_Topbar();
+
+    int x, y;
     for (x = 0; x < 128; x++) {
 		for (y = 0; y < 12; y++) {
 			Lib_LcdDrawPlot(x, y, 1);
@@ -115,12 +122,10 @@ void Display_Topbar(void) {
 
     // if (buff[0] <= 0x49) year += 100;
 
-    Lib_LcdPrintxy();
-
-    if (hour == 0)       Lib_LcdPrintxy(40, 2, 1, "12:%02d AM", minute);
-    if (hour == 12)      Lib_LcdPrintxy(40, 2, 1, "12:%02d PM", minute);
-    else if (hour < 12)  Lib_LcdPrintxy(40, 2, 1, "%02d:%02d AM", hour, minute);
-    else if (hour > 12)  Lib_LcdPrintxy(40, 2, 1, "%02d:%02d PM", hour - 12, minute);
+    if (hour == 0)       Lib_LcdPrintxy(40, 2, 0x80, "12:%02d AM", minute);
+    if (hour == 12)      Lib_LcdPrintxy(40, 2, 0x80, "12:%02d PM", minute);
+    else if (hour < 12)  Lib_LcdPrintxy(40, 2, 0x80, "%d:%02d AM", hour, minute);
+    else if (hour > 12)  Lib_LcdPrintxy(40, 2, 0x80, "%d:%02d PM", hour - 12, minute);
 
 }
 
@@ -173,6 +178,8 @@ unsigned char Display_Menu(char **menu, int lines) {
     int scroll = 0;
     unsigned char ucKey;
 
+	Lib_LcdGotoxy(0, 12);
+
     // menu length
     while (menu[len++] != NULL); len--;	
 
@@ -181,7 +188,7 @@ unsigned char Display_Menu(char **menu, int lines) {
         int count = 0;
         char** temp = (menu + scroll);
 
-        Lib_LcdCls();
+        Clear_Content();
         Lib_LcdSetFont(FONT_MEDIUM);
         while (*temp != NULL && count < lines) {
             Lib_Lcdprintf("%s\n", *temp++);
@@ -220,13 +227,11 @@ unsigned char Display_Menu(char **menu, int lines) {
 }
 
 int main(void) {
-	int iret;
-	int view = VIEW_WAITING;
-    int status = STATUS_UNKNOWN;
-    int scroll = 0;
-    char **curr_menu;
-	unsigned char ucKey;
-	unsigned char ucWlsResetFlag;
+	// int view = VIEW_WAITING;
+    // int status = STATUS_UNKNOWN;
+    // int scroll = 0;
+    // char **curr_menu;
+	// unsigned char ucKey;
 
 	Lib_AppInit();
  
@@ -267,6 +272,8 @@ int main(void) {
 	Display_Loading(10);
 
     // intro beeps
+	Lib_DelayMs(100);
+    Lib_Beef(7, 200);
     Lib_Beef(0, 200);
 	Lib_DelayMs(100);
     Lib_Beef(1, 200);
@@ -278,21 +285,20 @@ int main(void) {
     Lib_Beef(4, 200);
 	Lib_DelayMs(100);
     Lib_Beef(5, 200);
+	Lib_DelayMs(100);
+    Lib_Beef(6, 200);
 
 	while (TRUE) {
 		Lib_LcdCls();
 		Lib_KbFlush();
-
-        // display top bar
-        Display_Topbar();
-        Lib_LcdGotoxy(0, 12);
 
         // display content using views
 		if (view == VIEW_WAITING) {
 			if (Display_Waiting()) view = VIEW_MAIN;
 			else return 0;
 
-		} else if (view = VIEW_MAIN) {
+		} else if (view == VIEW_MAIN) {
+			Display_Topbar();
 			switch (Display_Menu(Main_Menu, 4)) {
 				case KEY1:
                     view = VIEW_ORDER_LIST; 
@@ -322,7 +328,8 @@ int main(void) {
 					view = VIEW_WAITING;
 			}
 
-		} else if (view = VIEW_ORDER_LIST) {
+		} else if (view == VIEW_ORDER_LIST) {
+			Display_Topbar();
             switch (Display_Menu(Sample_Order_List, 4)) {
                 case KEYENTER:
                     view = VIEW_ORDER;
@@ -338,7 +345,8 @@ int main(void) {
 					view = VIEW_ORDER_LIST;
 			}
 
-		} else if (view = VIEW_ORDER) {
+		} else if (view == VIEW_ORDER) {
+			Display_Topbar();
             if (status == STATUS_NEW) {
                 switch (Display_Menu(New_Order_Menu, 4)) {
                     case KEY1:
@@ -351,9 +359,6 @@ int main(void) {
                     case KEYBACKSPACE:
                         view = VIEW_ORDER_LIST;
                         break;
-
-                    view = VIEW_MAIN;
-                    break;
 
                     default:
                         view = VIEW_ORDER;
@@ -372,9 +377,6 @@ int main(void) {
                         view = VIEW_ORDER_LIST;
                         break;
 
-                    view = VIEW_MAIN;
-                    break;
-
                     default:
                         view = VIEW_ORDER;
                 }
@@ -391,9 +393,6 @@ int main(void) {
                     case KEYBACKSPACE:
                         view = VIEW_ORDER_LIST;
                         break;
-
-                    view = VIEW_MAIN;
-                    break;
 
                     default:
                         view = VIEW_ORDER;
@@ -412,19 +411,16 @@ int main(void) {
                         view = VIEW_ORDER_LIST;
                         break;
 
-                    view = VIEW_MAIN;
-                    break;
-
                     default:
                         view = VIEW_ORDER;
                 }
             
             }
 
-		} else if (view = VIEW_SETTINGS) {
+		} else if (view == VIEW_SETTINGS) {
+			Display_Topbar();
             switch (Display_Menu(Settings_Menu, 4)) {
 				default:
-                
 					view = VIEW_ORDER_LIST;
 			}
 		}
