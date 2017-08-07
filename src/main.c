@@ -11,17 +11,17 @@
 #include "icon_sig_4.h"
 #include "topbar.h"
 
-#define VIEW_WAITING     0
-#define VIEW_MAIN        1
-#define VIEW_ORDER       2
-#define VIEW_ORDER_LIST  3
-#define VIEW_SETTINGS    4
+#define VIEW_WAITING      0
+#define VIEW_MAIN         1
+#define VIEW_ORDER        2
+#define VIEW_ORDER_LIST   3
+#define VIEW_SETTINGS     4
 
-#define STATUS_UNKNOWN   0
-#define STATUS_NEW       1
-#define STATUS_PENDING   2
-#define STATUS_PICKED_UP 3
-#define STATUS_DELIVERED 4
+#define STATUS_UNKNOWN    0
+#define STATUS_NEW        1
+#define STATUS_PENDING    2
+#define STATUS_PICKED_UP  3
+#define STATUS_DELIVERED  4
 
 const APP_MSG App_Msg = {
 	"COOKSHOP.biz",
@@ -85,6 +85,10 @@ char *Sample_Order_List[] = {
     NULL
 };
 
+static int view     = VIEW_WAITING;
+static int status   = STATUS_UNKNOWN;
+static char *title  = NULL;
+
 void Clear_Topbar(void) {
 	Lib_LcdDrawLogo(g_Display_topbar);
 }
@@ -104,7 +108,7 @@ void Display_Loading(int level) {
 	else if (level > 9)  Lib_Lcdprintf("    Loading (100%%)   ");
 }
 
-void Display_Topbar(char *title) {
+void Display_Topbar(void) {
     Clear_Topbar();
 	Lib_LcdSetFont(LCD_FONT_SMALL);
 
@@ -116,7 +120,8 @@ void Display_Topbar(char *title) {
 	Lib_LcdGotoxy(128 - 17, 0);
 	Lib_LcdDrawLogo(g_Display_icon_bat_2);
 
-	if (title == NULL) {
+	if (title != NULL) Lib_LcdPrintxy(24, 2, 0x80, "%s", title);
+    else {
 		// print time YYMMDDhhmmssww
 		int year, month, day, hour, minute, second, week;
 		unsigned char buff[8];
@@ -137,8 +142,6 @@ void Display_Topbar(char *title) {
 		else if (hour < 12) Lib_LcdPrintxy(40, 2, 0x80,  "%d:%02d AM", hour, minute);
 		else if (hour < 13) Lib_LcdPrintxy(40, 2, 0x80,  "12:%02d PM", minute);
 		else if (hour > 12) Lib_LcdPrintxy(40, 2, 0x80,  "%d:%02d PM", hour - 12, minute);
-	} else {
-		Lib_LcdPrintxy(24, 2, 0x80, "%s", title);
 	}
 }
 
@@ -201,6 +204,8 @@ unsigned char Display_Menu(char **menu, int lines) {
         while (TRUE) {
 			int breakout = FALSE;
 
+            Display_Topbar();
+
             if (Lib_KbCheck()) continue;
             ucKey = Lib_KbGetCh();
 
@@ -254,6 +259,8 @@ int Display_List(char **list, int lines) {
 		Lib_KbFlush();
         while (TRUE) {
 			int breakout = FALSE;
+
+            Display_Topbar();
 
             if (Lib_KbCheck()) continue;
             ucKey = Lib_KbGetCh();
@@ -312,6 +319,8 @@ int Display_Confirm(char *message, char *yes, char *no) {
     while (TRUE) {
         int breakout = FALSE;
 
+        Display_Topbar();
+
         if (Lib_KbCheck()) continue;
         ucKey = Lib_KbGetCh();
 
@@ -348,6 +357,8 @@ void Display_Notice(char *message) {
 
     Lib_KbFlush();
     while (TRUE) {
+        Display_Topbar();
+
         if (Lib_KbCheck()) continue;
         ucKey = Lib_KbGetCh();
 
@@ -368,6 +379,7 @@ void Print_Order(char *order) {
 
     Lib_PrnStr("\n\n");
     Lib_PrnLogo(g_Display_logo_384);
+    Lib_PrnStart();
 
     Lib_PrnSetFont(PRN_FONT_LARGE);
 
@@ -390,65 +402,63 @@ void Print_Order(char *order) {
 }
 
 int main(void) {
-    int view = VIEW_WAITING;
-    int status = STATUS_UNKNOWN;
-
 	Lib_AppInit();
  
     // clear screen and keyboard
     Lib_LcdCls();
-    Lib_LcdClrDotBuf();
-    Lib_KbFlush();
+    // Lib_LcdClrDotBuf();
+    // Lib_KbFlush();
 
-	Display_Loading(0);
-	Lib_DelayMs(1000);
+	// Display_Loading(0);
+	// Lib_DelayMs(1000);
 
     // reset communication ports
- 	Display_Loading(3);
-    Lib_ComReset(COM1);
-    Lib_ComReset(COM2);
-    Lib_ComReset(AT_COM);
+ 	// Display_Loading(3);
+    // Lib_ComReset(COM1);
+    // Lib_ComReset(COM2);
+    // Lib_ComReset(AT_COM);
     // Lib_UsbReset(); // FIXME: find the port number for USB
-    Wls_Reset();
+    // Wls_Reset();
 
- 	Display_Loading(6);
-	Lib_DelayMs(1000);
+ 	// Display_Loading(6);
+	// Lib_DelayMs(1000);
 
     // initialize wireless
-    if (Wls_Init()) return 1;
+    // if (Wls_Init()) return 1;
 
     // initialize printer
-	if (Lib_PrnInit()) return 1;
+	// if (Lib_PrnInit()) return 1;
 
-  	Display_Loading(9);
-	Lib_DelayMs(1500);
+  	// Display_Loading(9);
+	// Lib_DelayMs(1500);
 
    // set up environment
-    if (Lib_FileExist("EnvFile") < 0) {
-		Lib_FilePutEnv("DIALNUM", "CMNET");
-		Lib_FilePutEnv("USERID",  "card");
-		Lib_FilePutEnv("USERPWD", "card");
-		Lib_FilePutEnv("IP",      "");
-		Lib_FilePutEnv("PORT",    "9005");
-    }
+    // if (Lib_FileExist("EnvFile") < 0) {
+	// 	Lib_FilePutEnv("DIALNUM", "CMNET");
+	// 	Lib_FilePutEnv("USERID",  "card");
+	// 	Lib_FilePutEnv("USERPWD", "card");
+	// 	Lib_FilePutEnv("IP",      "");
+	// 	Lib_FilePutEnv("PORT",    "9005");
+    // }
 
     // intro beeps
-	Display_Loading(10);
-    // Lib_Beef(7, 200);
+	// Display_Loading(10);
+    // Lib_Beep(7, 200);
 	// Lib_DelayMs(100);
-    Lib_Beef(0, 200);
+
+    Lib_Beep(0, 200);
 	Lib_DelayMs(100);
-    Lib_Beef(1, 200);
+    Lib_Beep(1, 200);
 	Lib_DelayMs(100);
-    Lib_Beef(2, 200);
+    Lib_Beep(2, 200);
 	Lib_DelayMs(100);
-    Lib_Beef(3, 200);
+    Lib_Beep(3, 200);
 	Lib_DelayMs(100);
-    Lib_Beef(4, 200);
+    Lib_Beep(4, 200);
 	Lib_DelayMs(100);
-    Lib_Beef(5, 200);
-	// Lib_DelayMs(100);
-    // Lib_Beef(6, 200);
+    Lib_Beep(5, 200);
+	Lib_DelayMs(100);
+    Lib_Beep(6, 200);
 
 	while (TRUE) {
 		Lib_LcdCls();
@@ -460,7 +470,7 @@ int main(void) {
 			else return 0;
 
 		} else if (view == VIEW_MAIN) {
-			Display_Topbar(NULL);
+			title = NULL;
 			switch (Display_Menu(Main_Menu, 4)) {
 				case KEY1:
                     view = VIEW_ORDER_LIST; 
@@ -491,10 +501,10 @@ int main(void) {
 			}
 
 		} else if (view == VIEW_ORDER_LIST) {
-			if (status == STATUS_NEW) 		     Display_Topbar("New orders");
-			else if (status == STATUS_PENDING)   Display_Topbar("Pending orders");
-			else if (status == STATUS_PICKED_UP) Display_Topbar("Picked-up");
-			else if (status == STATUS_DELIVERED) Display_Topbar("Delivered");
+			if (status == STATUS_NEW) 		     title = "New orders";
+			else if (status == STATUS_PENDING)   title = "Pending orders";
+			else if (status == STATUS_PICKED_UP) title = "Picked-up";
+			else if (status == STATUS_DELIVERED) title = "Delivered";
 
 			switch (Display_List(Sample_Order_List, 4)) {
 				case KEYCANCEL:
@@ -511,7 +521,7 @@ int main(void) {
 			}
 
 		} else if (view == VIEW_ORDER) {
-			Display_Topbar("Order CS146001");			
+			title = "Order CS146001";			
             if (status == STATUS_NEW) {
                 switch (Display_Menu(New_Order_Menu, 4)) {
                     case KEY1:
@@ -604,7 +614,7 @@ int main(void) {
             }
 
 		} else if (view == VIEW_SETTINGS) {
-			Display_Topbar("Settings");
+			title = "Settings";
             switch (Display_Menu(Settings_Menu, 4)) {
 				default:
 					view = VIEW_MAIN;
