@@ -101,3 +101,5 @@ dkms.conf
 # Tools
 */config.dat
 */config.hjb
+tools/obj/*
+tools/src/*

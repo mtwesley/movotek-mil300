@@ -7,6 +7,9 @@
 #include "public.h"
 #include "logo_128.h"
 #include "logo_384.h"
+#include "icon_bat_2.h"
+#include "icon_sig_4.h"
+#include "topbar.h"
 
 #define VIEW_WAITING     0
 #define VIEW_MAIN        1
@@ -83,7 +86,7 @@ char *Sample_Order_List[] = {
 };
 
 void Clear_Topbar(void) {
-    Lib_LcdClrLine(0, 11);
+	Lib_LcdDrawLogo(g_Display_topbar);
 }
 
 void Clear_Content(void) {
@@ -101,38 +104,42 @@ void Display_Loading(int level) {
 	else if (level > 9)  Lib_Lcdprintf("    Loading (100%%)   ");
 }
 
-void Display_Topbar(void) {
-    int x, y;
-    for (x = 0; x < 128; x++) {
-		for (y = 0; y < 12; y++) {
-			Lib_LcdDrawPlot(x, y, 1);
-        }
-    }
-
-    // print time YYMMDDhhmmssww
-	int year, month, day, hour, minute, second, week;
-	unsigned char buff[8];
-	
-    Lib_GetDateTime(buff);
-	
-    // year   = (buff[0] >> 4) * 10 + (buff[0] & 0x0f) + 1900;
-	// month  = (buff[1] >> 4) * 10 + (buff[1] & 0x0f);
-	// day    = (buff[2] >> 4) * 10 + (buff[2] & 0x0f);
-	hour   = (buff[3] >> 4) * 10 + (buff[3] & 0x0f);
-	minute = (buff[4] >> 4) * 10 + (buff[4] & 0x0f);
-	// second = (buff[5] >> 4) * 10 + (buff[5] & 0x0f);
-    // week   = (buff[6] >> 4) * 10 + (buff[6] & 0x0f);
-    // if (buff[0] <= 0x49) year += 100;
-
+void Display_Topbar(char *title) {
     Clear_Topbar();
-    Lib_LcdSetFont(LCD_FONT_SMALL);
-    Lib_LcdGotoxy(0, 12);
+	Lib_LcdSetFont(LCD_FONT_SMALL);
 
-    if (hour == 0)       Lib_LcdPrintxy(40, 2, 0x80, "12:%02d AM", minute);
-    if (hour == 12)      Lib_LcdPrintxy(40, 2, 0x80, "12:%02d PM", minute);
-    else if (hour < 12)  Lib_LcdPrintxy(40, 2, 0x80, "%d:%02d AM", hour, minute);
-    else if (hour > 12)  Lib_LcdPrintxy(40, 2, 0x80, "%d:%02d PM", hour - 12, minute);
+	// wireless signal
+	Lib_LcdGotoxy(1, 0);
+	Lib_LcdDrawLogo(g_Display_icon_sig_4);
 
+	// battery logo
+	Lib_LcdGotoxy(128 - 17, 0);
+	Lib_LcdDrawLogo(g_Display_icon_bat_2);
+
+	if (title == NULL) {
+		// print time YYMMDDhhmmssww
+		int year, month, day, hour, minute, second, week;
+		unsigned char buff[8];
+		
+		Lib_GetDateTime(buff);
+		
+		// year   = (buff[0] >> 4) * 10 + (buff[0] & 0x0f) + 1900;
+		// month  = (buff[1] >> 4) * 10 + (buff[1] & 0x0f);
+		// day    = (buff[2] >> 4) * 10 + (buff[2] & 0x0f);
+		hour   = (buff[3] >> 4) * 10 + (buff[3] & 0x0f);
+		minute = (buff[4] >> 4) * 10 + (buff[4] & 0x0f);
+		// second = (buff[5] >> 4) * 10 + (buff[5] & 0x0f);
+		// week   = (buff[6] >> 4) * 10 + (buff[6] & 0x0f);
+		// if (buff[0] <= 0x49) year += 100;
+
+		if (hour < 1)       Lib_LcdPrintxy(40, 2, 0x80,  "12:%02d AM", minute);
+		else if (hour < 10) Lib_LcdPrintxy(40, 2, 0x80, " %d:%02d AM", hour, minute);
+		else if (hour < 12) Lib_LcdPrintxy(40, 2, 0x80,  "%d:%02d AM", hour, minute);
+		else if (hour < 13) Lib_LcdPrintxy(40, 2, 0x80,  "12:%02d PM", minute);
+		else if (hour > 12) Lib_LcdPrintxy(40, 2, 0x80,  "%d:%02d PM", hour - 12, minute);
+	} else {
+		Lib_LcdPrintxy(24, 2, 0x80, "%s", title);
+	}
 }
 
 unsigned char Display_Waiting(void) {
@@ -287,10 +294,12 @@ int Display_List(char **list, int lines) {
 }
 
 int Display_Confirm(char *message, char *yes, char *no) {
+    unsigned char ucKey;
+
     Clear_Content();
+    Lib_LcdSetFont(LCD_FONT_MEDIUM);
     
     // print message
-    Lib_LcdSetFont(LCD_FONT_MEDIUM);
     Lib_LcdGotoxy(0, 12);
     Lib_Lcdprintf("%s\n", message);
 
@@ -307,7 +316,6 @@ int Display_Confirm(char *message, char *yes, char *no) {
         ucKey = Lib_KbGetCh();
 
         switch (ucKey) {
-            case KEYOK:
             case KEYENTER:
                 return 1;
 
@@ -325,28 +333,40 @@ int Display_Confirm(char *message, char *yes, char *no) {
 }
 
 void Display_Notice(char *message) {
+    unsigned char ucKey;
+
     Clear_Content();
+    Lib_LcdSetFont(LCD_FONT_MEDIUM);
     
     // print message
-    Lib_LcdSetFont(LCD_FONT_MEDIUM);
     Lib_LcdGotoxy(0, 12);
     Lib_Lcdprintf("%s\n", message);
 
     // print confirmation
-	Lib_LcdSetFont(LCD_FONT_SMALL);
-	Lib_Lcdprintf(" Press OK to continue");
+    Lib_LcdGotoxy(0, 12 * 4);
+	Lib_Lcdprintf("[OK] Continue");
 
     Lib_KbFlush();
     while (TRUE) {
         if (Lib_KbCheck()) continue;
-        return;
+        ucKey = Lib_KbGetCh();
+
+        switch (ucKey) {
+            case KEYOK:
+            case KEYENTER:
+                return;
+
+            
+            default:
+                continue;
+        }
     }
 }
 
 void Print_Order(char *order) {
-    
-    Lib_PrnStr("\n\n");
+	Lib_PrnInit();
 
+    Lib_PrnStr("\n\n");
     Lib_PrnLogo(g_Display_logo_384);
 
     Lib_PrnSetFont(PRN_FONT_LARGE);
@@ -365,6 +385,7 @@ void Print_Order(char *order) {
     Lib_PrnStr("1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890\n");
     Lib_PrnStr("\n\n");
 
+	// start printing
     Lib_PrnStart();
 }
 
@@ -400,7 +421,7 @@ int main(void) {
 	if (Lib_PrnInit()) return 1;
 
   	Display_Loading(9);
-	Lib_DelayMs(1000);
+	Lib_DelayMs(1500);
 
    // set up environment
     if (Lib_FileExist("EnvFile") < 0) {
@@ -412,8 +433,9 @@ int main(void) {
     }
 
     // intro beeps
-	Lib_DelayMs(100);
-    Lib_Beef(7, 200);
+	Display_Loading(10);
+    // Lib_Beef(7, 200);
+	// Lib_DelayMs(100);
     Lib_Beef(0, 200);
 	Lib_DelayMs(100);
     Lib_Beef(1, 200);
@@ -425,12 +447,8 @@ int main(void) {
     Lib_Beef(4, 200);
 	Lib_DelayMs(100);
     Lib_Beef(5, 200);
-	Lib_DelayMs(100);
-    Lib_Beef(6, 200);
-
-	// moment of silence for our lost hommies
-	Display_Loading(10);
-	Lib_DelayMs(1000);
+	// Lib_DelayMs(100);
+    // Lib_Beef(6, 200);
 
 	while (TRUE) {
 		Lib_LcdCls();
@@ -442,7 +460,7 @@ int main(void) {
 			else return 0;
 
 		} else if (view == VIEW_MAIN) {
-			Display_Topbar();
+			Display_Topbar(NULL);
 			switch (Display_Menu(Main_Menu, 4)) {
 				case KEY1:
                     view = VIEW_ORDER_LIST; 
@@ -473,7 +491,11 @@ int main(void) {
 			}
 
 		} else if (view == VIEW_ORDER_LIST) {
-			Display_Topbar();
+			if (status == STATUS_NEW) 		     Display_Topbar("New orders");
+			else if (status == STATUS_PENDING)   Display_Topbar("Pending orders");
+			else if (status == STATUS_PICKED_UP) Display_Topbar("Picked-up");
+			else if (status == STATUS_DELIVERED) Display_Topbar("Delivered");
+
 			switch (Display_List(Sample_Order_List, 4)) {
 				case KEYCANCEL:
                 case KEYMENU:
@@ -489,27 +511,27 @@ int main(void) {
 			}
 
 		} else if (view == VIEW_ORDER) {
-			Display_Topbar();
+			Display_Topbar("Order CS146001");			
             if (status == STATUS_NEW) {
                 switch (Display_Menu(New_Order_Menu, 4)) {
                     case KEY1:
-                        if (Display_Confirm("Confirm acceptance of this order?", "Yes", "No")) {
+                        if (Display_Confirm("Confirm acceptance\nof this order?", "Yes", "No")) {
                             Display_Notice("Order accepted.");
-                            view = VIEW_ORDER_LIST;
+                            view = VIEW_MAIN;
                         }
                         break;
 
                     case KEY2:
-                        if (Display_Confirm("Request to make changes to this order?", "Yes", "No")) {
-                            Display_Notice("Order changes requested.");
-                            view = VIEW_ORDER_LIST;
+                        if (Display_Confirm("Request changes to\nthis order?", "Yes", "No")) {
+                            Display_Notice("Order changes \nrequested.");
+                            view = VIEW_MAIN;
                         }
                         break;
                     
                     case KEY3:
-                        if (Display_Confirm("Confirm rejection of this order?", "Yes", "No")) {
+                        if (Display_Confirm("Confirm rejection of\nthis order?", "Yes", "No")) {
                             Display_Notice("Order rejected.");
-                            view = VIEW_ORDER_LIST;
+                            view = VIEW_MAIN;
                         }
                         break;
                     
@@ -517,7 +539,7 @@ int main(void) {
                         break;
 
                     case KEY5:
-                        Print_Order("CS123456");
+                        Print_Order("CS146001");
                         break;
 
                     case KEYCANCEL:
@@ -532,16 +554,16 @@ int main(void) {
             } else if (status == STATUS_PENDING) {
                 switch (Display_Menu(Pending_Order_Menu, 4)) {
                     case KEY1:
-                        if (Display_Confirm("Request to make changes to this order?", "Yes", "No")) {
-                            Display_Notice("Order changes requested.");
-                            view = VIEW_ORDER_LIST;
+                        if (Display_Confirm("Request changes to\nthis order?", "Yes", "No")) {
+                            Display_Notice("Order changes \nrequested.");
+                            view = VIEW_MAIN;
                         }
                         break;
                     
                     case KEY2:
-                        if (Display_Confirm("Confirm cancellation of this order?", "Yes", "No")) {
+                        if (Display_Confirm("Confirm cancellation\nof this order?", "Yes", "No")) {
                             Display_Notice("Order cancelled.");
-                            view = VIEW_ORDER_LIST;
+                            view = VIEW_MAIN;
                         }
                         break;
                     
@@ -549,7 +571,7 @@ int main(void) {
                         break;
 
                     case KEY4:
-                        Print_Order("CS123456");
+                        Print_Order("CS146001");
                         break;
                         
                     case KEYCANCEL:
@@ -567,7 +589,7 @@ int main(void) {
                         break;
 
                     case KEY2:
-                        Print_Order("CS123456");
+                        Print_Order("CS146001");
                         break;
                         
                     case KEYCANCEL:
@@ -582,7 +604,7 @@ int main(void) {
             }
 
 		} else if (view == VIEW_SETTINGS) {
-			Display_Topbar();
+			Display_Topbar("Settings");
             switch (Display_Menu(Settings_Menu, 4)) {
 				default:
 					view = VIEW_MAIN;
