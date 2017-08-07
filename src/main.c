@@ -5,10 +5,8 @@
 #include <ctype.h>
 
 #include "public.h"
-#include "logo_128.h"
-#include "logo_384.h"
-#include "icon_bat_2.h"
-#include "icon_sig_4.h"
+#include "logos.h"
+#include "icons.h"
 #include "topbar.h"
 
 #define VIEW_WAITING      0
@@ -87,7 +85,6 @@ char *Sample_Order_List[] = {
 
 static int view     = VIEW_WAITING;
 static int status   = STATUS_UNKNOWN;
-static char *title  = NULL;
 
 void Clear_Topbar(void) {
 	Lib_LcdDrawLogo(g_Display_topbar);
@@ -108,7 +105,7 @@ void Display_Loading(int level) {
 	else if (level > 9)  Lib_Lcdprintf("    Loading (100%%)   ");
 }
 
-void Display_Topbar(void) {
+void Display_Topbar(char *title) {
     Clear_Topbar();
 	Lib_LcdSetFont(LCD_FONT_SMALL);
 
@@ -150,7 +147,7 @@ unsigned char Display_Waiting(void) {
 
 	// draw logo
     Lib_LcdCls();
-	Lib_LcdGotoxy(0, 0);
+	Lib_LcdGotoxy(0, 2);
 	Lib_LcdDrawLogo(g_Display_logo_128);
 	Lib_LcdGotoxy(0, 64 - 14);
 
@@ -203,8 +200,6 @@ unsigned char Display_Menu(char **menu, int lines) {
 		Lib_KbFlush();
         while (TRUE) {
 			int breakout = FALSE;
-
-            Display_Topbar();
 
             if (Lib_KbCheck()) continue;
             ucKey = Lib_KbGetCh();
@@ -259,8 +254,6 @@ int Display_List(char **list, int lines) {
 		Lib_KbFlush();
         while (TRUE) {
 			int breakout = FALSE;
-
-            Display_Topbar();
 
             if (Lib_KbCheck()) continue;
             ucKey = Lib_KbGetCh();
@@ -319,8 +312,6 @@ int Display_Confirm(char *message, char *yes, char *no) {
     while (TRUE) {
         int breakout = FALSE;
 
-        Display_Topbar();
-
         if (Lib_KbCheck()) continue;
         ucKey = Lib_KbGetCh();
 
@@ -357,8 +348,6 @@ void Display_Notice(char *message) {
 
     Lib_KbFlush();
     while (TRUE) {
-        Display_Topbar();
-
         if (Lib_KbCheck()) continue;
         ucKey = Lib_KbGetCh();
 
@@ -379,7 +368,6 @@ void Print_Order(char *order) {
 
     Lib_PrnStr("\n\n");
     Lib_PrnLogo(g_Display_logo_384);
-    Lib_PrnStart();
 
     Lib_PrnSetFont(PRN_FONT_LARGE);
 
@@ -389,16 +377,19 @@ void Print_Order(char *order) {
     Lib_PrnStr("1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890\n");
     Lib_PrnStr("\n\n");
 
-    Lib_PrnSetFont(PRN_FONT_MEDIUM);
+    Lib_PrnStart();
+    Lib_PrnStart();
 
-    Lib_PrnStr("\n\n");
-    Lib_PrnStr("ABCDEFGHIJKLMNOPQRSTUVWXYZ\n");
-    Lib_PrnStr("abcdefghijklmnopqrstuvwxyz\n");
-    Lib_PrnStr("1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890\n");
-    Lib_PrnStr("\n\n");
+    // Lib_PrnSetFont(PRN_FONT_MEDIUM);
+
+    // Lib_PrnStr("\n\n");
+    // Lib_PrnStr("ABCDEFGHIJKLMNOPQRSTUVWXYZ\n");
+    // Lib_PrnStr("abcdefghijklmnopqrstuvwxyz\n");
+    // Lib_PrnStr("1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890\n");
+    // Lib_PrnStr("\n\n");
 
 	// start printing
-    Lib_PrnStart();
+    // Lib_PrnStart();
 }
 
 int main(void) {
@@ -443,22 +434,22 @@ int main(void) {
 
     // intro beeps
 	// Display_Loading(10);
-    // Lib_Beep(7, 200);
+    // Lib_Beef(7, 200);
 	// Lib_DelayMs(100);
 
-    Lib_Beep(0, 200);
-	Lib_DelayMs(100);
-    Lib_Beep(1, 200);
-	Lib_DelayMs(100);
-    Lib_Beep(2, 200);
-	Lib_DelayMs(100);
-    Lib_Beep(3, 200);
-	Lib_DelayMs(100);
-    Lib_Beep(4, 200);
-	Lib_DelayMs(100);
-    Lib_Beep(5, 200);
-	Lib_DelayMs(100);
-    Lib_Beep(6, 200);
+    // Lib_Beef(0, 200);
+	// Lib_DelayMs(100);
+    // Lib_Beef(1, 200);
+	// Lib_DelayMs(100);
+    // Lib_Beef(2, 200);
+	// Lib_DelayMs(100);
+    // Lib_Beef(3, 200);
+	// Lib_DelayMs(100);
+    // Lib_Beef(4, 200);
+	// Lib_DelayMs(100);
+    // Lib_Beef(5, 200);
+	// Lib_DelayMs(100);
+    // Lib_Beef(6, 200);
 
 	while (TRUE) {
 		Lib_LcdCls();
@@ -470,7 +461,7 @@ int main(void) {
 			else return 0;
 
 		} else if (view == VIEW_MAIN) {
-			title = NULL;
+			Display_Topbar(NULL);
 			switch (Display_Menu(Main_Menu, 4)) {
 				case KEY1:
                     view = VIEW_ORDER_LIST; 
@@ -501,10 +492,10 @@ int main(void) {
 			}
 
 		} else if (view == VIEW_ORDER_LIST) {
-			if (status == STATUS_NEW) 		     title = "New orders";
-			else if (status == STATUS_PENDING)   title = "Pending orders";
-			else if (status == STATUS_PICKED_UP) title = "Picked-up";
-			else if (status == STATUS_DELIVERED) title = "Delivered";
+			if (status == STATUS_NEW) 		     Display_Topbar("New orders");
+			else if (status == STATUS_PENDING)   Display_Topbar("Pending orders");
+			else if (status == STATUS_PICKED_UP) Display_Topbar("Picked-up");
+			else if (status == STATUS_DELIVERED) Display_Topbar("Delivered");
 
 			switch (Display_List(Sample_Order_List, 4)) {
 				case KEYCANCEL:
@@ -521,7 +512,7 @@ int main(void) {
 			}
 
 		} else if (view == VIEW_ORDER) {
-			title = "Order CS146001";			
+			Display_Topbar("Order CS146001");			
             if (status == STATUS_NEW) {
                 switch (Display_Menu(New_Order_Menu, 4)) {
                     case KEY1:
@@ -614,7 +605,7 @@ int main(void) {
             }
 
 		} else if (view == VIEW_SETTINGS) {
-			title = "Settings";
+			Display_Topbar("Settings");
             switch (Display_Menu(Settings_Menu, 4)) {
 				default:
 					view = VIEW_MAIN;

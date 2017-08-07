@@ -1,7 +1,5 @@
 #include "public.h"
 
-#define Lib_Beep Lib_Beef
-
 #define NULL 0
 
 void DispTimer2(void) {
