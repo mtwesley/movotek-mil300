@@ -50,6 +50,19 @@
 #define PRN_FONT_MEDIUM  16, 16, 0
 #define PRN_FONT_LARGE   24, 24, 0
 
+#define TIMER_1SEC   1 * 10
+#define TIMER_5SEC   5 * 10
+#define TIMER_10SEC  10 * 10
+
+#define TIMER_TOPBAR  1
+
+#define BATTERY_LEVEL5  8200
+#define BATTERY_LEVEL4  7500
+#define BATTERY_LEVEL3  7000
+#define BATTERY_LEVEL2  6500
+#define BATTERY_LEVEL1  6000
+
+
 void DispTimer2(void);
 void vDispTitle(char *mesg);
 void vDisp2(uchar line,char *mesg);

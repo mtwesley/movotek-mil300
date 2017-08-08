@@ -21,6 +21,8 @@
 #define STATUS_PICKED_UP  3
 #define STATUS_DELIVERED  4
 
+char *title = NULL;
+
 const APP_MSG App_Msg = {
 	"COOKSHOP.biz",
 	"0.1", 0, 0, 0,
@@ -105,41 +107,92 @@ void Display_Loading(int level) {
 	else if (level > 9)  Lib_Lcdprintf("    Loading (100%%)   ");
 }
 
-void Display_Topbar(char *title) {
-    Clear_Topbar();
-	Lib_LcdSetFont(LCD_FONT_SMALL);
+void Display_Signal() {
+	int signal = -1;
 
-	// wireless signal
-	Lib_LcdGotoxy(1, 0);
-	Lib_LcdDrawLogo(g_Display_icon_sig_4);
+    Lib_LcdGotoxy(1, 0);
 
-	// battery logo
-	Lib_LcdGotoxy(128 - 17, 0);
-	Lib_LcdDrawLogo(g_Display_icon_bat_2);
+    // if sim or no signal
+    if (Wls_CheckSim() || Wls_CheckSignal(&signal)) signal = -1;
 
-	if (title != NULL) Lib_LcdPrintxy(24, 2, 0x80, "%s", title);
+    switch (signal) {
+        case SIGNAL_VERY_STRONG:
+            Lib_LcdDrawLogo(g_Display_icon_sig_4); break;
+        
+        case SIGNAL_STRONG:
+            Lib_LcdDrawLogo(g_Display_icon_sig_3); break;
+        
+        case SIGNAL_NORMAL:
+            Lib_LcdDrawLogo(g_Display_icon_sig_3); break;
+        
+        case SIGNAL_WEAK:
+            Lib_LcdDrawLogo(g_Display_icon_sig_2); break;
+        
+        case SIGNAL_VERY_WEAK:
+            Lib_LcdDrawLogo(g_Display_icon_sig_1); break;
+
+        default:
+            Lib_LcdDrawLogo(g_Display_icon_sig_0);
+    }
+}
+
+void Display_Battery() {
+    int voltage = 0;
+    Lib_LcdGotoxy(128 - 17, 0);
+
+	if (Lib_GetBatChargeStatus() == BAT_CHARGE_ING) 
     else {
-		// print time YYMMDDhhmmssww
-		int year, month, day, hour, minute, second, week;
-		unsigned char buff[8];
+        voltage = Lib_GetBatteryVolt();
 		
-		Lib_GetDateTime(buff);
-		
-		// year   = (buff[0] >> 4) * 10 + (buff[0] & 0x0f) + 1900;
-		// month  = (buff[1] >> 4) * 10 + (buff[1] & 0x0f);
-		// day    = (buff[2] >> 4) * 10 + (buff[2] & 0x0f);
-		hour   = (buff[3] >> 4) * 10 + (buff[3] & 0x0f);
-		minute = (buff[4] >> 4) * 10 + (buff[4] & 0x0f);
-		// second = (buff[5] >> 4) * 10 + (buff[5] & 0x0f);
-		// week   = (buff[6] >> 4) * 10 + (buff[6] & 0x0f);
-		// if (buff[0] <= 0x49) year += 100;
-
-		if (hour < 1)       Lib_LcdPrintxy(40, 2, 0x80,  "12:%02d AM", minute);
-		else if (hour < 10) Lib_LcdPrintxy(40, 2, 0x80, " %d:%02d AM", hour, minute);
-		else if (hour < 12) Lib_LcdPrintxy(40, 2, 0x80,  "%d:%02d AM", hour, minute);
-		else if (hour < 13) Lib_LcdPrintxy(40, 2, 0x80,  "12:%02d PM", minute);
-		else if (hour > 12) Lib_LcdPrintxy(40, 2, 0x80,  "%d:%02d PM", hour - 12, minute);
+        if (voltage >= BATTERY_LEVEL5) Lib_LcdDrawLogo(g_Display_icon_bat_3);
+        else if (voltage >= BATTERY_LEVEL4) Lib_LcdDrawLogo(g_Display_icon_bat_2);
+        else if (voltage >= BATTERY_LEVEL3) Lib_LcdDrawLogo(g_Display_icon_bat_2);
+        else if (voltage >= BATTERY_LEVEL2) Lib_LcdDrawLogo(g_Display_icon_bat_1);
+        else if (voltage >= BATTERY_LEVEL1) Lib_LcdDrawLogo(g_Display_icon_bat_1);
+        else Lib_LcdDrawLogo(g_Display_icon_bat_0);
 	}
+}
+
+void Display_Title(char *title) {
+    Lib_LcdPrintxy(24, 2, 0x80, "%-14s", title);    
+}
+
+void Display_Time(int force) {
+    int year, month, day, hour, minute, second, week;
+    unsigned char datetime[8];
+    
+    Lib_GetDateTime(datetime);
+    
+    // year   = (datetime[0] >> 4) * 10 + (datetime[0] & 0x0f) + 1900;
+    // month  = (datetime[1] >> 4) * 10 + (datetime[1] & 0x0f);
+    // day    = (datetime[2] >> 4) * 10 + (datetime[2] & 0x0f);
+    hour   = (datetime[3] >> 4) * 10 + (datetime[3] & 0x0f);
+    minute = (datetime[4] >> 4) * 10 + (datetime[4] & 0x0f);
+    // second = (datetime[5] >> 4) * 10 + (datetime[5] & 0x0f);
+    // week   = (datetime[6] >> 4) * 10 + (datetime[6] & 0x0f);
+    // if (datetime[0] <= 0x49) year += 100;
+
+    if (hour < 1)       Lib_LcdPrintxy(24, 2, 0x80,  "   12:%02d AM  ", minute);
+    else if (hour < 10) Lib_LcdPrintxy(24, 2, 0x80, "    %d:%02d AM  ", hour, minute);
+    else if (hour < 12) Lib_LcdPrintxy(24, 2, 0x80,  "    %d:%02d AM ", hour, minute);
+    else if (hour < 13) Lib_LcdPrintxy(24, 2, 0x80,  "    12:%02d PM ", minute);
+    else if (hour > 12) Lib_LcdPrintxy(24, 2, 0x80,  "    %d:%02d PM ", hour - 12, minute);
+}
+
+void Display_Topbar(int force) {
+	if (!Lib_CheckTimer(TIMER_TOPBAR || force)) {
+        Clear_Topbar();
+
+        Display_Signal();
+        Display_Battery();
+
+        Lib_LcdSetFont(LCD_FONT_SMALL);
+
+        if (title != NULL) Display_Title(title);
+        else Display_Time(TRUE);
+
+        Lib_SetTimer(TIMER_TOPBAR, TIMER_1SEC);
+    }
 }
 
 unsigned char Display_Waiting(void) {
@@ -175,13 +228,13 @@ unsigned char Display_Waiting(void) {
 	return 1;
 }
 
-unsigned char Display_Menu(char **menu, int lines) {
+unsigned char View_Menu(char **menu, int lines) {
     int len = 0;
     int scroll = 0;
     unsigned char ucKey;
 
     // menu length
-    while (menu[len++] != NULL); len--;	
+    while (menu[len++] != NULL); len--;
 
     // scrolling
     while (len) {
@@ -189,6 +242,7 @@ unsigned char Display_Menu(char **menu, int lines) {
         char** temp = (menu + scroll);
 
         Clear_Content();
+        Display_Topbar(TRUE);
         Lib_LcdSetFont(LCD_FONT_MEDIUM);
         Lib_LcdGotoxy(0, 12);
         
@@ -200,6 +254,8 @@ unsigned char Display_Menu(char **menu, int lines) {
 		Lib_KbFlush();
         while (TRUE) {
 			int breakout = FALSE;
+
+            Display_Topbar(FALSE);
 
             if (Lib_KbCheck()) continue;
             ucKey = Lib_KbGetCh();
@@ -228,7 +284,7 @@ unsigned char Display_Menu(char **menu, int lines) {
 	return 1;
 }
 
-int Display_List(char **list, int lines) {
+int View_List(char **list, int lines) {
     int len = 0;
     int scroll = 0;
     unsigned char ucKey;
@@ -242,6 +298,7 @@ int Display_List(char **list, int lines) {
         char** temp = (list + ((scroll / lines) * lines));
 
         Clear_Content();
+        Display_Topbar(TRUE);
         Lib_LcdSetFont(LCD_FONT_MEDIUM);
         Lib_LcdGotoxy(0, 12);
         
@@ -254,6 +311,8 @@ int Display_List(char **list, int lines) {
 		Lib_KbFlush();
         while (TRUE) {
 			int breakout = FALSE;
+
+            Display_Topbar(FALSE);
 
             if (Lib_KbCheck()) continue;
             ucKey = Lib_KbGetCh();
@@ -297,6 +356,7 @@ int Display_Confirm(char *message, char *yes, char *no) {
     unsigned char ucKey;
 
     Clear_Content();
+    Display_Topbar(TRUE);
     Lib_LcdSetFont(LCD_FONT_MEDIUM);
     
     // print message
@@ -311,6 +371,8 @@ int Display_Confirm(char *message, char *yes, char *no) {
     Lib_KbFlush();
     while (TRUE) {
         int breakout = FALSE;
+
+        Display_Topbar(FALSE);
 
         if (Lib_KbCheck()) continue;
         ucKey = Lib_KbGetCh();
@@ -336,6 +398,7 @@ void Display_Notice(char *message) {
     unsigned char ucKey;
 
     Clear_Content();
+    Display_Topbar(TRUE);
     Lib_LcdSetFont(LCD_FONT_MEDIUM);
     
     // print message
@@ -348,6 +411,8 @@ void Display_Notice(char *message) {
 
     Lib_KbFlush();
     while (TRUE) {
+        Display_Topbar(FALSE);
+
         if (Lib_KbCheck()) continue;
         ucKey = Lib_KbGetCh();
 
@@ -397,8 +462,8 @@ int main(void) {
  
     // clear screen and keyboard
     Lib_LcdCls();
-    // Lib_LcdClrDotBuf();
-    // Lib_KbFlush();
+    Lib_LcdClrDotBuf();
+    Lib_KbFlush();
 
 	// Display_Loading(0);
 	// Lib_DelayMs(1000);
@@ -409,13 +474,13 @@ int main(void) {
     // Lib_ComReset(COM2);
     // Lib_ComReset(AT_COM);
     // Lib_UsbReset(); // FIXME: find the port number for USB
-    // Wls_Reset();
 
  	// Display_Loading(6);
 	// Lib_DelayMs(1000);
 
     // initialize wireless
-    // if (Wls_Init()) return 1;
+    Wls_Reset();
+    if (Wls_Init()) return 1;
 
     // initialize printer
 	// if (Lib_PrnInit()) return 1;
@@ -461,8 +526,8 @@ int main(void) {
 			else return 0;
 
 		} else if (view == VIEW_MAIN) {
-			Display_Topbar(NULL);
-			switch (Display_Menu(Main_Menu, 4)) {
+			title = NULL;
+			switch (View_Menu(Main_Menu, 4)) {
 				case KEY1:
                     view = VIEW_ORDER_LIST; 
                     status = STATUS_NEW;
@@ -492,12 +557,12 @@ int main(void) {
 			}
 
 		} else if (view == VIEW_ORDER_LIST) {
-			if (status == STATUS_NEW) 		     Display_Topbar("New orders");
-			else if (status == STATUS_PENDING)   Display_Topbar("Pending orders");
-			else if (status == STATUS_PICKED_UP) Display_Topbar("Picked-up");
-			else if (status == STATUS_DELIVERED) Display_Topbar("Delivered");
+			if (status == STATUS_NEW) 		     title = "New orders";
+			else if (status == STATUS_PENDING)   title = "Pending orders";
+			else if (status == STATUS_PICKED_UP) title = "Picked-up";
+			else if (status == STATUS_DELIVERED) title = "Delivered";
 
-			switch (Display_List(Sample_Order_List, 4)) {
+			switch (View_List(Sample_Order_List, 4)) {
 				case KEYCANCEL:
                 case KEYMENU:
                     view = VIEW_MAIN;
@@ -512,9 +577,9 @@ int main(void) {
 			}
 
 		} else if (view == VIEW_ORDER) {
-			Display_Topbar("Order CS146001");			
+			title = "Order CS146001";			
             if (status == STATUS_NEW) {
-                switch (Display_Menu(New_Order_Menu, 4)) {
+                switch (View_Menu(New_Order_Menu, 4)) {
                     case KEY1:
                         if (Display_Confirm("Confirm acceptance\nof this order?", "Yes", "No")) {
                             Display_Notice("Order accepted.");
@@ -553,7 +618,7 @@ int main(void) {
                 }
             
             } else if (status == STATUS_PENDING) {
-                switch (Display_Menu(Pending_Order_Menu, 4)) {
+                switch (View_Menu(Pending_Order_Menu, 4)) {
                     case KEY1:
                         if (Display_Confirm("Request changes to\nthis order?", "Yes", "No")) {
                             Display_Notice("Order changes \nrequested.");
@@ -585,7 +650,7 @@ int main(void) {
                 }
             
             } else if (status == STATUS_PICKED_UP || status == STATUS_DELIVERED) {
-                switch (Display_Menu(Non_Pending_Order_Menu, 4)) {
+                switch (View_Menu(Non_Pending_Order_Menu, 4)) {
                     case KEY1:
                         break;
 
@@ -605,8 +670,8 @@ int main(void) {
             }
 
 		} else if (view == VIEW_SETTINGS) {
-			Display_Topbar("Settings");
-            switch (Display_Menu(Settings_Menu, 4)) {
+			title = "Settings";
+            switch (View_Menu(Settings_Menu, 4)) {
 				default:
 					view = VIEW_MAIN;
 			}
