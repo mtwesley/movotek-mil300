@@ -564,7 +564,7 @@ int main(void) {
   	// Display_Loading(9);
 	Lib_DelayMs(1500);
 
-   // set up environment
+    // set up environment
     // if (Lib_FileExist("EnvFile") < 0) {
 	// 	Lib_FilePutEnv("DIALNUM", "CMNET");
 	// 	Lib_FilePutEnv("USERID",  "card");
@@ -575,22 +575,23 @@ int main(void) {
 
     // intro beeps
 	Display_Loading(10);
-    // Lib_Beef(7, 200);
-	// Lib_DelayMs(100);
 
-    Lib_Beef(0, 200);
+    Lib_Beep();
+	Lib_DelayMs(1000);
+
+    Lib_Beef(0, 2000);
 	Lib_DelayMs(100);
-    Lib_Beef(1, 200);
+    Lib_Beef(1, 2000);
 	Lib_DelayMs(100);
-    Lib_Beef(2, 200);
+    Lib_Beef(2, 2000);
 	Lib_DelayMs(100);
-    Lib_Beef(3, 200);
+    Lib_Beef(3, 2000);
 	Lib_DelayMs(100);
-    Lib_Beef(4, 200);
+    Lib_Beef(4, 2000);
 	Lib_DelayMs(100);
-    Lib_Beef(5, 200);
+    Lib_Beef(5, 2000);
 	Lib_DelayMs(100);
-    Lib_Beef(6, 200);
+    Lib_Beef(6, 2000);
 
 	while (TRUE) {
 		Lib_LcdCls();
