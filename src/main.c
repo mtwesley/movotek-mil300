@@ -89,6 +89,7 @@ static int view     = VIEW_WAITING;
 static int status   = STATUS_UNKNOWN;
 
 void Clear_Topbar(void) {
+    Lib_LcdGotoxy(0, 0);
 	Lib_LcdDrawLogo(g_Display_topbar);
 }
 
@@ -114,7 +115,6 @@ void Display_Signal() {
 
     // if sim or no signal
     if (Wls_CheckSim() || Wls_CheckSignal(&signal)) signal = -1;
-
     switch (signal) {
         case SIGNAL_VERY_STRONG:
             Lib_LcdDrawLogo(g_Display_icon_sig_4); break;
@@ -140,14 +140,13 @@ void Display_Battery() {
     int voltage = 0;
     Lib_LcdGotoxy(128 - 17, 0);
 
-	if (Lib_GetBatChargeStatus() == BAT_CHARGE_ING) 
+	if (Lib_GetBatChargeStatus() == BAT_CHARGE_ING) Lib_LcdDrawLogo(g_Display_icon_chg);
     else {
         voltage = Lib_GetBatteryVolt();
-		
-        if (voltage >= BATTERY_LEVEL5) Lib_LcdDrawLogo(g_Display_icon_bat_3);
-        else if (voltage >= BATTERY_LEVEL4) Lib_LcdDrawLogo(g_Display_icon_bat_2);
-        else if (voltage >= BATTERY_LEVEL3) Lib_LcdDrawLogo(g_Display_icon_bat_2);
-        else if (voltage >= BATTERY_LEVEL2) Lib_LcdDrawLogo(g_Display_icon_bat_1);
+        if (voltage >= BATTERY_LEVEL5) Lib_LcdDrawLogo(g_Display_icon_bat_5);
+        else if (voltage >= BATTERY_LEVEL4) Lib_LcdDrawLogo(g_Display_icon_bat_4);
+        else if (voltage >= BATTERY_LEVEL3) Lib_LcdDrawLogo(g_Display_icon_bat_3);
+        else if (voltage >= BATTERY_LEVEL2) Lib_LcdDrawLogo(g_Display_icon_bat_2);
         else if (voltage >= BATTERY_LEVEL1) Lib_LcdDrawLogo(g_Display_icon_bat_1);
         else Lib_LcdDrawLogo(g_Display_icon_bat_0);
 	}
@@ -191,7 +190,7 @@ void Display_Topbar(int force) {
         if (title != NULL) Display_Title(title);
         else Display_Time(TRUE);
 
-        Lib_SetTimer(TIMER_TOPBAR, TIMER_1SEC);
+        Lib_SetTimer(TIMER_TOPBAR, TIMER_5SEC);
     }
 }
 
@@ -465,28 +464,28 @@ int main(void) {
     Lib_LcdClrDotBuf();
     Lib_KbFlush();
 
-	// Display_Loading(0);
-	// Lib_DelayMs(1000);
+	Display_Loading(0);
+	Lib_DelayMs(1000);
 
     // reset communication ports
- 	// Display_Loading(3);
-    // Lib_ComReset(COM1);
-    // Lib_ComReset(COM2);
-    // Lib_ComReset(AT_COM);
+ 	Display_Loading(3);
+    Lib_ComReset(COM1);
+    Lib_ComReset(COM2);
+    Lib_ComReset(AT_COM);
     // Lib_UsbReset(); // FIXME: find the port number for USB
 
- 	// Display_Loading(6);
-	// Lib_DelayMs(1000);
+ 	Display_Loading(6);
+	Lib_DelayMs(1000);
 
     // initialize wireless
     Wls_Reset();
     if (Wls_Init()) return 1;
 
     // initialize printer
-	// if (Lib_PrnInit()) return 1;
+	if (Lib_PrnInit()) return 1;
 
   	// Display_Loading(9);
-	// Lib_DelayMs(1500);
+	Lib_DelayMs(1500);
 
    // set up environment
     // if (Lib_FileExist("EnvFile") < 0) {
@@ -498,23 +497,23 @@ int main(void) {
     // }
 
     // intro beeps
-	// Display_Loading(10);
+	Display_Loading(10);
     // Lib_Beef(7, 200);
 	// Lib_DelayMs(100);
 
-    // Lib_Beef(0, 200);
-	// Lib_DelayMs(100);
-    // Lib_Beef(1, 200);
-	// Lib_DelayMs(100);
-    // Lib_Beef(2, 200);
-	// Lib_DelayMs(100);
-    // Lib_Beef(3, 200);
-	// Lib_DelayMs(100);
-    // Lib_Beef(4, 200);
-	// Lib_DelayMs(100);
-    // Lib_Beef(5, 200);
-	// Lib_DelayMs(100);
-    // Lib_Beef(6, 200);
+    Lib_Beef(0, 200);
+	Lib_DelayMs(100);
+    Lib_Beef(1, 200);
+	Lib_DelayMs(100);
+    Lib_Beef(2, 200);
+	Lib_DelayMs(100);
+    Lib_Beef(3, 200);
+	Lib_DelayMs(100);
+    Lib_Beef(4, 200);
+	Lib_DelayMs(100);
+    Lib_Beef(5, 200);
+	Lib_DelayMs(100);
+    Lib_Beef(6, 200);
 
 	while (TRUE) {
 		Lib_LcdCls();
