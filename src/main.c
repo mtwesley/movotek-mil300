@@ -15,6 +15,13 @@
 #define VIEW_ORDER_LIST   3
 #define VIEW_SETTINGS     4
 
+#define VIEW_SETTINGS_DISPLAY  41
+#define VIEW_SETTINGS_SOUND    42
+#define VIEW_SETTINGS_NETWORK  43
+#define VIEW_SETTINGS_PRINTER  44
+#define VIEW_SETTINGS_CLOCK    45
+#define VIEW_SETTINGS_BATTERY  46
+
 #define STATUS_UNKNOWN    0
 #define STATUS_NEW        1
 #define STATUS_PENDING    2
@@ -76,6 +83,76 @@ char *Settings_Menu[] = {
     NULL
 };
 
+char *Settings_Display_Menu[] = {
+    "[1] Contrast",
+    "[2] Backlight",
+    NULL
+};
+
+char *Settings_Sound_Menu[] = {
+    "[1] Keypad",
+    "[2] Ringtone",
+    NULL
+};
+
+char *Settings_Network_Menu[] = {
+    "[1] Select SIM",
+    "[2] Enter PIN",
+    "[3] Check status",
+    NULL
+};
+
+char *Settings_Printer_Menu[] = {
+    "[1] Contrast",
+    "[2] Speed",
+    NULL
+};
+
+char *Settings_Display_Contrast_List[] = {
+    "Very High",
+    "High",
+    "Medium",
+    "Low",
+    "Very Low",
+    NULL
+};
+
+char *Settings_Display_Backlight_List[] = {
+    "Always off",
+    "Sometimes on",
+    "Always on",
+    NULL
+};
+
+char *Settings_Sound_Keypad_List[] = {
+    "Mute",
+    "Unmute",
+    NULL
+};
+
+char *Settings_Sound_Ringtone_List[] = {
+    "Ringtone #1",
+    "Ringtone #2",
+    "Ringtone #3",
+    "Ringtone #4",
+    NULL
+};
+
+char *Settings_Network_Sim_List[] = {
+    "SIM 1",
+    "SIM 2",
+    NULL
+};
+
+char *Settings__Contrast_List[] = {
+    "Very High",
+    "High",
+    "Medium",
+    "Low",
+    "Very Low",
+    NULL
+};
+
 char *Sample_Order_List[] = {
     "CS146001",
     "CS146002",
@@ -94,7 +171,7 @@ void Clear_Topbar(void) {
 }
 
 void Clear_Content(void) {
-    Lib_LcdClrLine(12, 63);
+    Lib_LcdClrLine(16, 63);
 }
 
 void Display_Loading(int level) {
@@ -156,7 +233,7 @@ void Display_Title(char *title) {
     Lib_LcdPrintxy(24, 2, 0x80, "%-14s", title);    
 }
 
-void Display_Time(int force) {
+void Display_Time() {
     int year, month, day, hour, minute, second, week;
     unsigned char datetime[8];
     
@@ -179,7 +256,7 @@ void Display_Time(int force) {
 }
 
 void Display_Topbar(int force) {
-	if (!Lib_CheckTimer(TIMER_TOPBAR || force)) {
+	if (!Lib_CheckTimer(TIMER_TOPBAR) || force) {
         Clear_Topbar();
 
         Display_Signal();
@@ -188,7 +265,7 @@ void Display_Topbar(int force) {
         Lib_LcdSetFont(LCD_FONT_SMALL);
 
         if (title != NULL) Display_Title(title);
-        else Display_Time(TRUE);
+        else Display_Time();
 
         Lib_SetTimer(TIMER_TOPBAR, TIMER_5SEC);
     }
@@ -243,7 +320,7 @@ unsigned char View_Menu(char **menu, int lines) {
         Clear_Content();
         Display_Topbar(TRUE);
         Lib_LcdSetFont(LCD_FONT_MEDIUM);
-        Lib_LcdGotoxy(0, 12);
+        Lib_LcdGotoxy(0, 16);
         
         while (*temp != NULL && count < lines) {
             Lib_Lcdprintf("%s\n", *temp++);
@@ -299,7 +376,7 @@ int View_List(char **list, int lines) {
         Clear_Content();
         Display_Topbar(TRUE);
         Lib_LcdSetFont(LCD_FONT_MEDIUM);
-        Lib_LcdGotoxy(0, 12);
+        Lib_LcdGotoxy(0, 16);
         
         while (*temp != NULL && count < lines) {
             if (count == (scroll % lines)) Lib_Lcdprintf("[*] %s\n", *temp++);
@@ -359,11 +436,11 @@ int Display_Confirm(char *message, char *yes, char *no) {
     Lib_LcdSetFont(LCD_FONT_MEDIUM);
     
     // print message
-    Lib_LcdGotoxy(0, 12);
+    Lib_LcdGotoxy(0, 16);
     Lib_Lcdprintf("%s\n", message);
 
     // print confirmation
-    Lib_LcdGotoxy(0, 12 * 3);
+    Lib_LcdGotoxy(0, 4 + (12 * 3));
     Lib_Lcdprintf("[YES] %s\n", yes);
     Lib_Lcdprintf(" [NO] %s\n", no);
 
@@ -401,11 +478,11 @@ void Display_Notice(char *message) {
     Lib_LcdSetFont(LCD_FONT_MEDIUM);
     
     // print message
-    Lib_LcdGotoxy(0, 12);
+    Lib_LcdGotoxy(0, 16);
     Lib_Lcdprintf("%s\n", message);
 
     // print confirmation
-    Lib_LcdGotoxy(0, 12 * 4);
+    Lib_LcdGotoxy(0, 4 + (12 * 4));
 	Lib_Lcdprintf("[OK] Continue");
 
     Lib_KbFlush();
@@ -441,19 +518,19 @@ void Print_Order(char *order) {
     Lib_PrnStr("1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890\n");
     Lib_PrnStr("\n\n");
 
-    Lib_PrnStart();
-    Lib_PrnStart();
+    Lib_PrnSetFont(PRN_FONT_MEDIUM);
 
-    // Lib_PrnSetFont(PRN_FONT_MEDIUM);
+    Lib_PrnStr("\n\n");
+    Lib_PrnStr("ABCDEFGHIJKLMNOPQRSTUVWXYZ\n");
+    Lib_PrnStr("abcdefghijklmnopqrstuvwxyz\n");
+    Lib_PrnStr("1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890\n");
 
-    // Lib_PrnStr("\n\n");
-    // Lib_PrnStr("ABCDEFGHIJKLMNOPQRSTUVWXYZ\n");
-    // Lib_PrnStr("abcdefghijklmnopqrstuvwxyz\n");
-    // Lib_PrnStr("1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890\n");
-    // Lib_PrnStr("\n\n");
+    Lib_PrnSetFont(PRN_FONT_LARGE);
+
+    Lib_PrnStr("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
 
 	// start printing
-    // Lib_PrnStart();
+    Lib_PrnStart();
 }
 
 int main(void) {
@@ -521,6 +598,7 @@ int main(void) {
 
         // display content using views
 		if (view == VIEW_WAITING) {
+            title = NULL;
 			if (Display_Waiting()) view = VIEW_MAIN;
 			else return 0;
 
@@ -583,29 +661,25 @@ int main(void) {
                         if (Display_Confirm("Confirm acceptance\nof this order?", "Yes", "No")) {
                             Display_Notice("Order accepted.");
                             view = VIEW_MAIN;
-                        }
-                        break;
+                        } break;
 
                     case KEY2:
                         if (Display_Confirm("Request changes to\nthis order?", "Yes", "No")) {
                             Display_Notice("Order changes \nrequested.");
                             view = VIEW_MAIN;
-                        }
-                        break;
+                        } break;
                     
                     case KEY3:
                         if (Display_Confirm("Confirm rejection of\nthis order?", "Yes", "No")) {
                             Display_Notice("Order rejected.");
                             view = VIEW_MAIN;
-                        }
-                        break;
+                        } break;
                     
                     case KEY4:
                         break;
 
                     case KEY5:
-                        Print_Order("CS146001");
-                        break;
+                        Print_Order("CS146001"); break;
 
                     case KEYCANCEL:
                     case KEYBACKSPACE:
@@ -622,15 +696,13 @@ int main(void) {
                         if (Display_Confirm("Request changes to\nthis order?", "Yes", "No")) {
                             Display_Notice("Order changes \nrequested.");
                             view = VIEW_MAIN;
-                        }
-                        break;
+                        } break;
                     
                     case KEY2:
                         if (Display_Confirm("Confirm cancellation\nof this order?", "Yes", "No")) {
                             Display_Notice("Order cancelled.");
                             view = VIEW_MAIN;
-                        }
-                        break;
+                        } break;
                     
                     case KEY3:
                         break;
@@ -654,13 +726,11 @@ int main(void) {
                         break;
 
                     case KEY2:
-                        Print_Order("CS146001");
-                        break;
+                        Print_Order("CS146001"); break;
                         
                     case KEYCANCEL:
                     case KEYBACKSPACE:
-                        view = VIEW_ORDER_LIST;
-                        break;
+                        view = VIEW_ORDER_LIST; break;
 
                     default:
                         view = VIEW_ORDER;
@@ -671,10 +741,198 @@ int main(void) {
 		} else if (view == VIEW_SETTINGS) {
 			title = "Settings";
             switch (View_Menu(Settings_Menu, 4)) {
+                case KEY1:
+                    view = VIEW_SETTINGS_DISPLAY; break;
+
+                case KEY2:
+                    view = VIEW_SETTINGS_SOUND; break;
+
+                case KEY3:
+                    view = VIEW_SETTINGS_NETWORK;
+                    title = "Network";
+                    break;
+
+                case KEY4:
+                    view = VIEW_SETTINGS_PRINTER;
+                    title = "Printer";
+                    break;
+
+                case KEY5:
+                    view = VIEW_SETTINGS_CLOCK;
+                    title = "Clock";
+                    break;
+
+                case KEY6:
+                    view = VIEW_SETTINGS_BATTERY;
+                    title = "Battery";
+                    break;
+
+				case KEYCANCEL:
+                case KEYMENU:
+                    view = VIEW_MAIN;
+                    break;
+
 				default:
-					view = VIEW_MAIN;
+					view = VIEW_SETTINGS;
 			}
-		}
+		} else if (view == VIEW_SETTINGS_DISPLAY) {
+			title = "Display";
+            switch (View_Menu(Settings_Display_Menu, 4)) {
+                case KEY1:
+                    title = "Contrast";
+                    int contrast = View_List(Settings_Display_Contrast_List, 4);
+                    switch (contrast) {
+                        case KEYCANCEL:
+                        case KEYMENU:
+                            view = VIEW_SETTINGS_DISPLAY;
+                            break;
+
+                        default:
+                            if (0 <= contrast && contrast <= 4) Lib_LcdSetGray(((int) contrast + 4) * 11);
+                            view = VIEW_SETTINGS_DISPLAY;
+                    }
+                    break;
+
+                case KEY2:
+                    title = "Backlight";
+                    int backlight = View_List(Settings_Display_Backlight_List, 4);
+                    switch (backlight) {
+                        case KEYCANCEL:
+                        case KEYMENU:
+                            view = VIEW_SETTINGS_DISPLAY;
+                            break;
+
+                        default:
+                            if (0 <= backlight && backlight <= 2) Lib_LcdSetBackLight(backlight);
+                            view = VIEW_SETTINGS_DISPLAY;
+                    }
+                    break;
+
+                case KEYCANCEL:
+                case KEYMENU:
+                    view = VIEW_SETTINGS;
+                    break;
+
+                default:
+                    view = VIEW_SETTINGS_DISPLAY;
+            }
+		} else if (view == VIEW_SETTINGS_SOUND) {
+            title = "Sound";
+            switch (View_Menu(Settings_Sound_Menu, 4)) {
+                case KEY1:
+                    title = "Keypad";
+                    int mute = View_List(Settings_Sound_Keypad_List, 4);
+                    switch (mute) {
+                        case KEYCANCEL:
+                        case KEYMENU:
+                            view = VIEW_SETTINGS_NETWORK;
+                            break;
+
+                        default:
+                            // if (0 <= mute && mute <= 1) Set_Mute(mute);
+                            view = VIEW_SETTINGS_NETWORK;
+                    }
+                    break;
+
+                case KEY2:
+                    title = "Ringtone";
+                    int ringtone = View_List(Settings_Sound_Ringtone_List, 4);
+                    switch (ringtone) {
+                        case KEYCANCEL:
+                        case KEYMENU:
+                            view = VIEW_SETTINGS_SOUND;
+                            break;
+
+                        default:
+                            // if (0 <= ringtone && ringtone <= 3) Set_Ringtone(ringtone);
+                            view = VIEW_SETTINGS_SOUND;
+                    }
+                    break;
+
+                case KEYCANCEL:
+                case KEYMENU:
+                    view = VIEW_SETTINGS;
+                    break;
+
+                default:
+                    view = VIEW_SETTINGS_SOUND;
+            }
+		} else if (view == VIEW_SETTINGS_NETWORK) {
+			title = "Network";
+            switch (View_Menu(Settings_Network_Menu, 4)) {
+                case KEY1:
+                    title = "Select SIM";
+                    int sim = View_List(Settings_Network_Sim_List, 4);
+                    switch (sim) {
+                        case KEYCANCEL:
+                        case KEYMENU:
+                            view = VIEW_SETTINGS_NETWORK;
+                            break;
+
+                        default:
+                            // if (0 <= sim && sim <= 1) Set_Sim((int) sim + 1));
+                            view = VIEW_SETTINGS_NETWORK;
+                    }
+                    break;
+
+                case KEY2:
+                    title = "Enter PIN";
+                    Display_Notice("Enter PIN");
+                    break;
+
+                case KEY3:
+                    title = "Check Status";
+                    Display_Notice("Details of network setup.");
+                    break;
+
+                case KEYCANCEL:
+                case KEYMENU:
+                    view = VIEW_SETTINGS;
+                    break;
+
+                default:
+                    view = VIEW_SETTINGS_NETWORK;
+            }
+		} else if (view == VIEW_SETTINGS_PRINTER) {
+			title = "Printer";
+            switch (View_Menu(Settings_Network_Menu, 4)) {
+                case KEY1:
+                    title = "Select SIM";
+                    int sim = View_List(Settings_Network_Sim_List, 4);
+                    switch (sim) {
+                        case KEYCANCEL:
+                        case KEYMENU:
+                            view = VIEW_SETTINGS_NETWORK;
+                            break;
+
+                        default:
+                            // if (0 <= sim && sim <= 1) Set_Sim((int) sim + 1));
+                            view = VIEW_SETTINGS_NETWORK;
+                    }
+                    break;
+
+                case KEY2:
+                    title = "Enter PIN";
+                    Display_Notice("Enter PIN");
+                    break;
+
+                case KEY3:
+                    title = "Check Status";
+                    Display_Notice("Details of network setup.");
+                    break;
+
+                case KEYCANCEL:
+                case KEYMENU:
+                    view = VIEW_SETTINGS;
+                    break;
+
+                default:
+                    view = VIEW_SETTINGS_NETWORK;
+            }
+		} else {
+            view = VIEW_WAITING;
+            title = NULL;
+        }
 	}
 	return 1;			
 }
