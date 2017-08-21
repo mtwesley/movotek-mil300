@@ -78,8 +78,8 @@ char *Settings_Menu[] = {
     "[2] Sound",
     "[3] Network",
     "[4] Printer",
-    "[5] Clock",
-    "[6] Battery",
+    // "[5] Clock",
+    // "[6] Battery",
     NULL
 };
 
@@ -144,7 +144,13 @@ char *Settings_Network_Sim_List[] = {
     NULL
 };
 
-char *Settings__Contrast_List[] = {
+char *Settings_Printer_Speed_List[] = {
+    "Fast",
+    "Slow",
+    NULL
+};
+
+char *Settings_Printer_Contrast_List[] = {
     "Very High",
     "High",
     "Medium",
@@ -152,7 +158,6 @@ char *Settings__Contrast_List[] = {
     "Very Low",
     NULL
 };
-
 char *Sample_Order_List[] = {
     "CS146001",
     "CS146002",
@@ -165,9 +170,27 @@ char *Sample_Order_List[] = {
 static int view     = VIEW_WAITING;
 static int status   = STATUS_UNKNOWN;
 
+void Refresh_Settings(void) {
+    BYTE *value;
+
+    // Display
+    if (Lib_FileGetEnv("LCDGRAY", value) == 0) Lib_LcdSetGray((atoi(value) + 4) * 11);
+    if (Lib_FileGetEnv("BCKLIGHT", value) == 0) Lib_LcdSetBackLight(atoi(value));
+    
+    // Sound
+    if (Lib_FileGetEnv("KBMUTE", value) == 0) Lib_KbMute(atoi(value));
+    
+    // Network
+    if (Lib_FileGetEnv("SIMNO", value) == 0) Wls_SelectSim(atoi(value));
+
+    // Printer
+    if (Lib_FileGetEnv("PRNGRAY", value) == 0) Lib_PrnSetGray(atoi(value) + 3);
+    if (Lib_FileGetEnv("PRNSPEED", value) == 0) Lib_PrnSetSpeed((atoi(value) * 10) + 13);
+}
+
 void Clear_Topbar(void) {
     Lib_LcdGotoxy(0, 0);
-	Lib_LcdDrawLogo(g_Display_topbar);
+    Lib_LcdDrawLogo(g_Display_topbar);
 }
 
 void Clear_Content(void) {
@@ -304,9 +327,10 @@ unsigned char Display_Waiting(void) {
 	return 1;
 }
 
-unsigned char View_Menu(char **menu, int lines) {
+unsigned char View_Menu(char **menu) {
     int len = 0;
     int scroll = 0;
+    int lines = 4;
     unsigned char ucKey;
 
     // menu length
@@ -360,9 +384,10 @@ unsigned char View_Menu(char **menu, int lines) {
 	return 1;
 }
 
-int View_List(char **list, int lines) {
+int View_List(char **list, int count) {
     int len = 0;
     int scroll = 0;
+    int lines = 4;
     unsigned char ucKey;
 
     // list length
@@ -370,7 +395,6 @@ int View_List(char **list, int lines) {
 
     // scrolling
     while (len) {
-        int count = 0;
         char** temp = (list + ((scroll / lines) * lines));
 
         Clear_Content();
@@ -533,16 +557,21 @@ void Print_Order(char *order) {
     Lib_PrnStart();
 }
 
+
+
 int main(void) {
+    int list_value;
+    BYTE *env_value;
+
 	Lib_AppInit();
  
     // clear screen and keyboard
-    Lib_LcdCls();
-    Lib_LcdClrDotBuf();
-    Lib_KbFlush();
+    // Lib_LcdCls();
+    // Lib_LcdClrDotBuf();
+    // Lib_KbFlush();
 
 	Display_Loading(0);
-	Lib_DelayMs(1000);
+	// Lib_DelayMs(1000);
 
     // reset communication ports
  	Display_Loading(3);
@@ -552,17 +581,17 @@ int main(void) {
     // Lib_UsbReset(); // FIXME: find the port number for USB
 
  	Display_Loading(6);
-	Lib_DelayMs(1000);
+	// Lib_DelayMs(1000);
 
     // initialize wireless
     Wls_Reset();
     if (Wls_Init()) return 1;
 
     // initialize printer
-	if (Lib_PrnInit()) return 1;
+	// if (Lib_PrnInit()) return 1;
 
   	// Display_Loading(9);
-	Lib_DelayMs(1500);
+	// Lib_DelayMs(1500);
 
     // set up environment
     // if (Lib_FileExist("EnvFile") < 0) {
@@ -574,28 +603,30 @@ int main(void) {
     // }
 
     // intro beeps
-	Display_Loading(10);
+	// Display_Loading(10);
 
-    Lib_Beep();
-	Lib_DelayMs(1000);
+    // Lib_Beep();
+	// Lib_DelayMs(1000);
 
-    Lib_Beef(0, 2000);
-	Lib_DelayMs(100);
-    Lib_Beef(1, 2000);
-	Lib_DelayMs(100);
-    Lib_Beef(2, 2000);
-	Lib_DelayMs(100);
-    Lib_Beef(3, 2000);
-	Lib_DelayMs(100);
-    Lib_Beef(4, 2000);
-	Lib_DelayMs(100);
-    Lib_Beef(5, 2000);
-	Lib_DelayMs(100);
-    Lib_Beef(6, 2000);
+    // Lib_Beef(0, 2000);
+	// Lib_DelayMs(100);
+    // Lib_Beef(1, 2000);
+	// Lib_DelayMs(100);
+    // Lib_Beef(2, 2000);
+	// Lib_DelayMs(100);
+    // Lib_Beef(3, 2000);
+	// Lib_DelayMs(100);
+    // Lib_Beef(4, 2000);
+	// Lib_DelayMs(100);
+    // Lib_Beef(5, 2000);
+	// Lib_DelayMs(100);
+    // Lib_Beef(6, 2000);
 
 	while (TRUE) {
-		Lib_LcdCls();
-		Lib_KbFlush();
+        Lib_LcdCls();
+        Lib_LcdClrDotBuf();
+        Lib_KbFlush();
+        Refresh_Settings();
 
         // display content using views
 		if (view == VIEW_WAITING) {
@@ -605,7 +636,7 @@ int main(void) {
 
 		} else if (view == VIEW_MAIN) {
 			title = NULL;
-			switch (View_Menu(Main_Menu, 4)) {
+			switch (View_Menu(Main_Menu)) {
 				case KEY1:
                     view = VIEW_ORDER_LIST; 
                     status = STATUS_NEW;
@@ -640,7 +671,7 @@ int main(void) {
 			else if (status == STATUS_PICKED_UP) title = "Picked-up";
 			else if (status == STATUS_DELIVERED) title = "Delivered";
 
-			switch (View_List(Sample_Order_List, 4)) {
+			switch (View_List(Sample_Order_List, 0)) {
 				case KEYCANCEL:
                 case KEYMENU:
                     view = VIEW_MAIN;
@@ -657,7 +688,7 @@ int main(void) {
 		} else if (view == VIEW_ORDER) {
 			title = "Order CS146001";			
             if (status == STATUS_NEW) {
-                switch (View_Menu(New_Order_Menu, 4)) {
+                switch (View_Menu(New_Order_Menu)) {
                     case KEY1:
                         if (Display_Confirm("Confirm acceptance\nof this order?", "Yes", "No")) {
                             Display_Notice("Order accepted.");
@@ -692,7 +723,7 @@ int main(void) {
                 }
             
             } else if (status == STATUS_PENDING) {
-                switch (View_Menu(Pending_Order_Menu, 4)) {
+                switch (View_Menu(Pending_Order_Menu)) {
                     case KEY1:
                         if (Display_Confirm("Request changes to\nthis order?", "Yes", "No")) {
                             Display_Notice("Order changes \nrequested.");
@@ -722,7 +753,7 @@ int main(void) {
                 }
             
             } else if (status == STATUS_PICKED_UP || status == STATUS_DELIVERED) {
-                switch (View_Menu(Non_Pending_Order_Menu, 4)) {
+                switch (View_Menu(Non_Pending_Order_Menu)) {
                     case KEY1:
                         break;
 
@@ -741,7 +772,7 @@ int main(void) {
 
 		} else if (view == VIEW_SETTINGS) {
 			title = "Settings";
-            switch (View_Menu(Settings_Menu, 4)) {
+            switch (View_Menu(Settings_Menu)) {
                 case KEY1:
                     view = VIEW_SETTINGS_DISPLAY; break;
 
@@ -778,33 +809,37 @@ int main(void) {
 			}
 		} else if (view == VIEW_SETTINGS_DISPLAY) {
 			title = "Display";
-            switch (View_Menu(Settings_Display_Menu, 4)) {
+            switch (View_Menu(Settings_Display_Menu)) {
                 case KEY1:
                     title = "Contrast";
-                    int contrast = View_List(Settings_Display_Contrast_List, 4);
-                    switch (contrast) {
+                    if (Lib_FileGetEnv("LCDGRAY", env_value)) env_value = '0';
+                    list_value = View_List(Settings_Display_Contrast_List, atoi(env_value));
+                    switch (list_value) {
                         case KEYCANCEL:
                         case KEYMENU:
                             view = VIEW_SETTINGS_DISPLAY;
                             break;
 
                         default:
-                            if (0 <= contrast && contrast <= 4) Lib_LcdSetGray(((int) contrast + 4) * 11);
+                            sprintf(env_value, "%d", list_value);
+                            if (0 <= list_value && list_value <= 4) Lib_FilePutEnv("LCDGRAY", env_value);
                             view = VIEW_SETTINGS_DISPLAY;
                     }
                     break;
 
                 case KEY2:
                     title = "Backlight";
-                    int backlight = View_List(Settings_Display_Backlight_List, 4);
-                    switch (backlight) {
+                    if (Lib_FileGetEnv("BCKLIGHT", env_value)) env_value = '0';
+                    list_value = View_List(Settings_Display_Backlight_List, atoi(env_value));
+                    switch (list_value) {
                         case KEYCANCEL:
                         case KEYMENU:
                             view = VIEW_SETTINGS_DISPLAY;
                             break;
 
                         default:
-                            if (0 <= backlight && backlight <= 2) Lib_LcdSetBackLight(backlight);
+                            sprintf(env_value, "%d", list_value);
+                            if (0 <= list_value && list_value <= 2) Lib_FilePutEnv("BCKLIGHT", env_value);
                             view = VIEW_SETTINGS_DISPLAY;
                     }
                     break;
@@ -819,33 +854,37 @@ int main(void) {
             }
 		} else if (view == VIEW_SETTINGS_SOUND) {
             title = "Sound";
-            switch (View_Menu(Settings_Sound_Menu, 4)) {
+            switch (View_Menu(Settings_Sound_Menu)) {
                 case KEY1:
                     title = "Keypad";
-                    int mute = View_List(Settings_Sound_Keypad_List, 4);
-                    switch (mute) {
+                    if (Lib_FileGetEnv("KBMUTE", env_value)) env_value = '0';
+                    list_value = View_List(Settings_Sound_Keypad_List, atoi(env_value));
+                    switch (list_value) {
                         case KEYCANCEL:
                         case KEYMENU:
                             view = VIEW_SETTINGS_NETWORK;
                             break;
 
                         default:
-                            // if (0 <= mute && mute <= 1) Set_Mute(mute);
+                            sprintf(env_value, "%d", list_value);
+                            if (0 <= list_value && list_value <= 1) Lib_FilePutEnv("KBMUTE", env_value);
                             view = VIEW_SETTINGS_NETWORK;
                     }
                     break;
 
                 case KEY2:
                     title = "Ringtone";
-                    int ringtone = View_List(Settings_Sound_Ringtone_List, 4);
-                    switch (ringtone) {
+                    if (Lib_FileGetEnv("RINGTONE", env_value)) env_value = '0';
+                    list_value = View_List(Settings_Sound_Ringtone_List, atoi(env_value));
+                    switch (list_value) {
                         case KEYCANCEL:
                         case KEYMENU:
                             view = VIEW_SETTINGS_SOUND;
                             break;
 
                         default:
-                            // if (0 <= ringtone && ringtone <= 3) Set_Ringtone(ringtone);
+                            sprintf(env_value, "%d", list_value);
+                            if (0 <= list_value && list_value <= 3) Lib_FilePutEnv("RINGTONE", env_value);
                             view = VIEW_SETTINGS_SOUND;
                     }
                     break;
@@ -860,18 +899,20 @@ int main(void) {
             }
 		} else if (view == VIEW_SETTINGS_NETWORK) {
 			title = "Network";
-            switch (View_Menu(Settings_Network_Menu, 4)) {
+            switch (View_Menu(Settings_Network_Menu)) {
                 case KEY1:
                     title = "Select SIM";
-                    int sim = View_List(Settings_Network_Sim_List, 4);
-                    switch (sim) {
+                    if (Lib_FileGetEnv("SIMNO", env_value)) env_value = '0';
+                    list_value = View_List(Settings_Network_Sim_List, atoi(env_value));
+                    switch (list_value) {
                         case KEYCANCEL:
                         case KEYMENU:
                             view = VIEW_SETTINGS_NETWORK;
                             break;
 
                         default:
-                            // if (0 <= sim && sim <= 1) Set_Sim((int) sim + 1));
+                            sprintf(env_value, "%d", list_value);
+                            if (0 <= list_value && list_value <= 1) Lib_FilePutEnv("SIMNO", env_value);
                             view = VIEW_SETTINGS_NETWORK;
                     }
                     break;
@@ -896,30 +937,39 @@ int main(void) {
             }
 		} else if (view == VIEW_SETTINGS_PRINTER) {
 			title = "Printer";
-            switch (View_Menu(Settings_Network_Menu, 4)) {
+            switch (View_Menu(Settings_Printer_Menu)) {
                 case KEY1:
-                    title = "Select SIM";
-                    int sim = View_List(Settings_Network_Sim_List, 4);
-                    switch (sim) {
+                    title = "Contrast";
+                    if (Lib_FileGetEnv("PRNGRAY", env_value)) env_value = '0';
+                    list_value = View_List(Settings_Printer_Contrast_List, atoi(env_value));
+                    switch (list_value) {
                         case KEYCANCEL:
                         case KEYMENU:
-                            view = VIEW_SETTINGS_NETWORK;
+                            view = VIEW_SETTINGS_PRINTER;
                             break;
 
                         default:
-                            // if (0 <= sim && sim <= 1) Set_Sim((int) sim + 1));
-                            view = VIEW_SETTINGS_NETWORK;
+                            sprintf(env_value, "%d", list_value);
+                            if (0 <= list_value && list_value <= 4) Lib_FilePutEnv("PRNGRAY", env_value);
+                            view = VIEW_SETTINGS_PRINTER;
                     }
                     break;
 
                 case KEY2:
-                    title = "Enter PIN";
-                    Display_Notice("Enter PIN");
-                    break;
+                    title = "Speed";
+                    if (Lib_FileGetEnv("PRNSPEED", env_value)) env_value = '0';
+                    list_value = View_List(Settings_Printer_Speed_List, atoi(env_value));
+                    switch (speed) {
+                        case KEYCANCEL:
+                        case KEYMENU:
+                            view = VIEW_SETTINGS_PRINTER;
+                            break;
 
-                case KEY3:
-                    title = "Check Status";
-                    Display_Notice("Details of network setup.");
+                        default:
+                            sprintf(env_value, "%d", list_value);
+                            if (0 <= list_value && list_value <= 1) Lib_FilePutEnv("PRNSPEED", env_value);
+                            view = VIEW_SETTINGS_PRINTER;
+                    }
                     break;
 
                 case KEYCANCEL:
@@ -928,7 +978,7 @@ int main(void) {
                     break;
 
                 default:
-                    view = VIEW_SETTINGS_NETWORK;
+                    view = VIEW_SETTINGS_PRINTER;
             }
 		} else {
             view = VIEW_WAITING;
