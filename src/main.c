@@ -171,21 +171,21 @@ static int view     = VIEW_WAITING;
 static int status   = STATUS_UNKNOWN;
 
 void Refresh_Settings(void) {
-    BYTE *value;
+    unsigned char *value;
 
     // Display
-    if (Lib_FileGetEnv("LCDGRAY", value) == 0) Lib_LcdSetGray(((value[0] - '0') + 4) * 11);
-    if (Lib_FileGetEnv("BCKLIGHT", value) == 0) Lib_LcdSetBackLight(value[0] - '0');
+    if (Lib_FileGetEnv("LCDGRAY", value) == 0) Lib_LcdSetGray(((value[0] - 0x30) + 4) * 11);
+    if (Lib_FileGetEnv("BCKLIGHT", value) == 0) Lib_LcdSetBackLight(value[0] - 0x30);
     
     // Sound
-    if (Lib_FileGetEnv("KBMUTE", value) == 0) Lib_KbMute(value[0] - '0');
+    if (Lib_FileGetEnv("KBMUTE", value) == 0) Lib_KbMute(value[0] - 0x30);
     
     // Network
-    if (Lib_FileGetEnv("SIMNO", value) == 0) Wls_SelectSim(value[0] - '0');
+    if (Lib_FileGetEnv("SIMNO", value) == 0) Wls_SelectSim(value[0] - 0x30);
 
     // Printer
-    if (Lib_FileGetEnv("PRNGRAY", value) == 0) Lib_PrnSetGray((value[0] - '0') + 3);
-    if (Lib_FileGetEnv("PRNSPEED", value) == 0) Lib_PrnSetSpeed(((value[0] - '0') * 10) + 13);
+    if (Lib_FileGetEnv("PRNGRAY", value) == 0) Lib_PrnSetGray((value[0] - 0x30) + 3);
+    if (Lib_FileGetEnv("PRNSPEED", value) == 0) Lib_PrnSetSpeed(((value[0] - 0x30) * 10) + 13);
 }
 
 void Clear_Topbar(void) {
@@ -244,7 +244,7 @@ void Display_Battery() {
     else {
         voltage = Lib_GetBatteryVolt();
         if (voltage >= BATTERY_LEVEL5) Lib_LcdDrawLogo(g_Display_icon_bat_5);
-        else if (voltage >= BATTERY_LEVEL4) Lib_LcdDrawLogo(g_Display_icon_bat_4);
+        else if (voltage >= BATTERY_LEVEL4) Lib_LcdDrawLogo(g_Display_icon_bat_5);
         else if (voltage >= BATTERY_LEVEL3) Lib_LcdDrawLogo(g_Display_icon_bat_3);
         else if (voltage >= BATTERY_LEVEL2) Lib_LcdDrawLogo(g_Display_icon_bat_2);
         else if (voltage >= BATTERY_LEVEL1) Lib_LcdDrawLogo(g_Display_icon_bat_1);
@@ -384,18 +384,23 @@ unsigned char View_Menu(char **menu) {
 	return 1;
 }
 
-int View_List(char **list, int count) {
+int View_List(char **list, int scroll) {
     int len = 0;
-    int scroll = 0;
+    // int scroll = 0;
     int lines = 4;
     unsigned char ucKey;
 
     // list length
     while (list[len++] != NULL); len--;	
 
+    if (scroll < 0 || len < scroll) scroll = 0;
+
     // scrolling
     while (len) {
+        int count = 0;
         char** temp = (list + ((scroll / lines) * lines));
+
+        sprintf(title, "%d, %d", count, scroll);
 
         Clear_Content();
         Display_Topbar(TRUE);
@@ -557,11 +562,10 @@ void Print_Order(char *order) {
     Lib_PrnStart();
 }
 
-
-
 int main(void) {
-    int list_value;
-    BYTE *env_value;
+    unsigned char *env_value;
+    unsigned char list_value;
+    unsigned char list_env_value[2] = "\0";
 
 	Lib_AppInit();
  
@@ -621,6 +625,19 @@ int main(void) {
     // Lib_Beef(5, 2000);
 	// Lib_DelayMs(100);
     // Lib_Beef(6, 2000);
+
+    Lib_Beef(6, 200);
+    Lib_Beef(3, 300);
+	Lib_DelayMs(100);
+    Lib_Beef(6, 200);
+    Lib_Beef(3, 300);
+	Lib_DelayMs(100);
+    Lib_Beef(6, 200);
+    Lib_Beef(3, 300);
+	Lib_DelayMs(100);
+    Lib_Beef(6, 200);
+    Lib_Beef(3, 300);
+	Lib_DelayMs(100);
 
 	while (TRUE) {
         Lib_LcdCls();
@@ -812,8 +829,8 @@ int main(void) {
             switch (View_Menu(Settings_Display_Menu)) {
                 case KEY1:
                     title = "Contrast";
-                    if (Lib_FileGetEnv("LCDGRAY", env_value)) env_value = "0";
-                    list_value = View_List(Settings_Display_Contrast_List, env_value[0] - '0');
+                    if (Lib_FileGetEnv("LCDGRAY", list_env_value)) list_env_value[0] = 0x30;
+                    list_value = View_List(Settings_Display_Contrast_List, list_env_value[0]);
                     switch (list_value) {
                         case KEYCANCEL:
                         case KEYMENU:
@@ -821,16 +838,16 @@ int main(void) {
                             break;
 
                         default:
-                            sprintf(env_value, "%d", list_value);
-                            if (0 <= list_value && list_value <= 4) Lib_FilePutEnv("LCDGRAY", env_value);
+                            list_env_value[0] = list_value;
+                            Lib_FilePutEnv("LCDGRAY", list_env_value);
                             view = VIEW_SETTINGS_DISPLAY;
                     }
                     break;
 
                 case KEY2:
                     title = "Backlight";
-                    if (Lib_FileGetEnv("BCKLIGHT", env_value)) env_value = "0";
-                    list_value = View_List(Settings_Display_Backlight_List, env_value[0] - '0');
+                    if (Lib_FileGetEnv("BCKLIGHT", list_env_value)) list_env_value[0] = 0x30;
+                    list_value = View_List(Settings_Display_Backlight_List, list_env_value[0]);
                     switch (list_value) {
                         case KEYCANCEL:
                         case KEYMENU:
@@ -838,8 +855,8 @@ int main(void) {
                             break;
 
                         default:
-                            sprintf(env_value, "%d", list_value);
-                            if (0 <= list_value && list_value <= 2) Lib_FilePutEnv("BCKLIGHT", env_value);
+                            list_env_value[0] = list_value;
+                            Lib_FilePutEnv("BCKLIGHT", list_env_value);
                             view = VIEW_SETTINGS_DISPLAY;
                     }
                     break;
@@ -857,25 +874,8 @@ int main(void) {
             switch (View_Menu(Settings_Sound_Menu)) {
                 case KEY1:
                     title = "Keypad";
-                    if (Lib_FileGetEnv("KBMUTE", env_value)) env_value = "0";
-                    list_value = View_List(Settings_Sound_Keypad_List, env_value[0] - '0');
-                    switch (list_value) {
-                        case KEYCANCEL:
-                        case KEYMENU:
-                            view = VIEW_SETTINGS_NETWORK;
-                            break;
-
-                        default:
-                            sprintf(env_value, "%d", list_value);
-                            if (0 <= list_value && list_value <= 1) Lib_FilePutEnv("KBMUTE", env_value);
-                            view = VIEW_SETTINGS_NETWORK;
-                    }
-                    break;
-
-                case KEY2:
-                    title = "Ringtone";
-                    if (Lib_FileGetEnv("RINGTONE", env_value)) env_value = "0";
-                    list_value = View_List(Settings_Sound_Ringtone_List, env_value[0] - '0');
+                    if (Lib_FileGetEnv("KBMUTE", list_env_value)) list_env_value[0] = 0x30;
+                    list_value = View_List(Settings_Sound_Keypad_List, list_env_value[0]);
                     switch (list_value) {
                         case KEYCANCEL:
                         case KEYMENU:
@@ -883,8 +883,25 @@ int main(void) {
                             break;
 
                         default:
-                            sprintf(env_value, "%d", list_value);
-                            if (0 <= list_value && list_value <= 3) Lib_FilePutEnv("RINGTONE", env_value);
+                            list_env_value[0] = list_value;
+                            Lib_FilePutEnv("KBMUTE", list_env_value);
+                            view = VIEW_SETTINGS_SOUND;
+                    }
+                    break;
+
+                case KEY2:
+                    title = "Ringtone";
+                    if (Lib_FileGetEnv("RINGTONE", list_env_value)) list_env_value[0] = 0x30;
+                    list_value = View_List(Settings_Sound_Ringtone_List, list_env_value[0]);
+                    switch (list_value) {
+                        case KEYCANCEL:
+                        case KEYMENU:
+                            view = VIEW_SETTINGS_SOUND;
+                            break;
+
+                        default:
+                            list_env_value[0] = list_value;
+                            Lib_FilePutEnv("RINGTONE", list_env_value);
                             view = VIEW_SETTINGS_SOUND;
                     }
                     break;
@@ -902,8 +919,8 @@ int main(void) {
             switch (View_Menu(Settings_Network_Menu)) {
                 case KEY1:
                     title = "Select SIM";
-                    if (Lib_FileGetEnv("SIMNO", env_value)) env_value = "0";
-                    list_value = View_List(Settings_Network_Sim_List, env_value[0] - '0');
+                    if (Lib_FileGetEnv("SIMNO", list_env_value)) list_env_value[0] = 0x30;
+                    list_value = View_List(Settings_Network_Sim_List, list_env_value[0]);
                     switch (list_value) {
                         case KEYCANCEL:
                         case KEYMENU:
@@ -911,8 +928,8 @@ int main(void) {
                             break;
 
                         default:
-                            sprintf(env_value, "%d", list_value);
-                            if (0 <= list_value && list_value <= 1) Lib_FilePutEnv("SIMNO", env_value);
+                            list_env_value[0] = list_value;
+                            Lib_FilePutEnv("SIMNO", list_env_value);
                             view = VIEW_SETTINGS_NETWORK;
                     }
                     break;
@@ -940,8 +957,8 @@ int main(void) {
             switch (View_Menu(Settings_Printer_Menu)) {
                 case KEY1:
                     title = "Contrast";
-                    if (Lib_FileGetEnv("PRNGRAY", env_value)) env_value = "0";
-                    list_value = View_List(Settings_Printer_Contrast_List, env_value[0] - '0');
+                    if (Lib_FileGetEnv("PRNGRAY", list_env_value)) list_env_value[0] = 0x30;
+                    list_value = View_List(Settings_Printer_Contrast_List, list_env_value[0]);
                     switch (list_value) {
                         case KEYCANCEL:
                         case KEYMENU:
@@ -949,16 +966,16 @@ int main(void) {
                             break;
 
                         default:
-                            sprintf(env_value, "%d", list_value);
-                            if (0 <= list_value && list_value <= 4) Lib_FilePutEnv("PRNGRAY", env_value);
+                            list_env_value[0] = list_value;
+                            Lib_FilePutEnv("PRNGRAY", list_env_value);
                             view = VIEW_SETTINGS_PRINTER;
                     }
                     break;
 
                 case KEY2:
                     title = "Speed";
-                    if (Lib_FileGetEnv("PRNSPEED", env_value)) env_value = "0";
-                    list_value = View_List(Settings_Printer_Speed_List, env_value[0] - '0');
+                    if (Lib_FileGetEnv("PRNSPEED", list_env_value)) list_env_value[0] = 0x30;
+                    list_value = View_List(Settings_Printer_Speed_List, list_env_value[0]);
                     switch (list_value) {
                         case KEYCANCEL:
                         case KEYMENU:
@@ -966,8 +983,8 @@ int main(void) {
                             break;
 
                         default:
-                            sprintf(env_value, "%d", list_value);
-                            if (0 <= list_value && list_value <= 1) Lib_FilePutEnv("PRNSPEED", env_value);
+                            list_env_value[0] = list_value;
+                            Lib_FilePutEnv("PRNSPEED", list_env_value);
                             view = VIEW_SETTINGS_PRINTER;
                     }
                     break;
