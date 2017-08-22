@@ -194,7 +194,7 @@ void Clear_Topbar(void) {
 }
 
 void Clear_Content(void) {
-    Lib_LcdClrLine(16, 63);
+    Lib_LcdClrLine(14, 63);
 }
 
 void Display_Loading(int level) {
@@ -296,41 +296,47 @@ void Display_Topbar(int force) {
         if (title != NULL) Display_Title(title);
         else Display_Time();
 
-        Lib_SetTimer(TIMER_TOPBAR, TIMER_5SEC);
+        Lib_SetTimer(TIMER_TOPBAR, TIMER_2SEC);
     }
 }
 
-unsigned char Display_Waiting(void) {
+unsigned char Display_Waiting(int force) {
+    unsigned int len;
+    unsigned char * phone, timestamp, msg, len;
     unsigned char ucKey;
 
-	// draw logo
-    Lib_LcdCls();
-	Lib_LcdGotoxy(0, 2);
-	Lib_LcdDrawLogo(g_Display_logo_128);
-	Lib_LcdGotoxy(0, 64 - 14);
+	if (!Lib_CheckTimer(TIMER_TOPBAR) || force) {
+        // draw logo
+        Lib_LcdCls();
+        Lib_LcdGotoxy(0, 2);
+        Lib_LcdDrawLogo(g_Display_logo_128);
+        Lib_LcdGotoxy(0, 64 - 14);
 
-	// draw text
-	Lib_LcdSetFont(LCD_FONT_SMALL);
-	Lib_Lcdprintf("  Press OK for menu");
+        // draw text
+        Lib_LcdSetFont(LCD_FONT_SMALL);
+        Lib_Lcdprintf("  Press OK for menu");
 
-	// wait for OK, ESC, CANCEL, or MENU
-	Lib_KbFlush();
-	while (TRUE) {
-		if (Lib_KbCheck()) continue;
+        // wait for OK, ESC, CANCEL, or MENU
+        Lib_KbFlush();
+        while (TRUE) {
+            if (Lib_KbCheck()) continue;
+            if (!Wls_Readmessage(phone, timestamp, msg, len)) Display_Notice("Message received!");
 
-		ucKey = Lib_KbGetCh();
-		switch (ucKey) {
-			// case KEYCANCEL:
-			// case KEYCLEAR:
-			// case KEYFN:
-			// case KEYBACKSPACE:
-			case KEYMENU:
-			case KEYENTER:
-            case KEYOK:
-				return ucKey;
-		}
-	}
-	return 1;
+            ucKey = Lib_KbGetCh();
+            switch (ucKey) {
+                // case KEYCANCEL:
+                // case KEYCLEAR:
+                // case KEYFN:
+                // case KEYBACKSPACE:
+                case KEYMENU:
+                case KEYENTER:
+                case KEYOK:
+                    Lib_SetTimer(TIMER_WAITING, TIMER_30SEC);                
+                    return ucKey;
+            }
+        }
+        return -1;
+    }
 }
 
 unsigned char View_Menu(char **menu) {
@@ -350,7 +356,7 @@ unsigned char View_Menu(char **menu) {
         Clear_Content();
         Display_Topbar(TRUE);
         Lib_LcdSetFont(LCD_FONT_MEDIUM);
-        Lib_LcdGotoxy(0, 16);
+        Lib_LcdGotoxy(0, 14);
         
         while (*temp != NULL && count < lines) {
             Lib_Lcdprintf("%s\n", *temp++);
@@ -362,6 +368,7 @@ unsigned char View_Menu(char **menu) {
 			int breakout = FALSE;
 
             Display_Topbar(FALSE);
+            Display_Waiting(FALSE);
 
             if (Lib_KbCheck()) continue;
             ucKey = Lib_KbGetCh();
@@ -409,7 +416,7 @@ int View_List(char **list, int scroll) {
         Clear_Content();
         Display_Topbar(TRUE);
         Lib_LcdSetFont(LCD_FONT_MEDIUM);
-        Lib_LcdGotoxy(0, 16);
+        Lib_LcdGotoxy(0, 14);
         
         while (*temp != NULL && count < lines) {
             if (count == (scroll % lines)) Lib_Lcdprintf("[*] %s\n", *temp++);
@@ -469,7 +476,7 @@ int Display_Confirm(char *message, char *yes, char *no) {
     Lib_LcdSetFont(LCD_FONT_MEDIUM);
     
     // print message
-    Lib_LcdGotoxy(0, 16);
+    Lib_LcdGotoxy(0, 14);
     Lib_Lcdprintf("%s\n", message);
 
     // print confirmation
@@ -511,7 +518,7 @@ void Display_Notice(char *message) {
     Lib_LcdSetFont(LCD_FONT_MEDIUM);
     
     // print message
-    Lib_LcdGotoxy(0, 16);
+    Lib_LcdGotoxy(0, 14);
     Lib_Lcdprintf("%s\n", message);
 
     // print confirmation
@@ -651,7 +658,7 @@ int main(void) {
         // display content using views
 		if (view == VIEW_WAITING) {
             title = NULL;
-			if (Display_Waiting()) view = VIEW_MAIN;
+			if (Display_Waiting(TRUE)) view = VIEW_MAIN;
 			else return 0;
 
 		} else if (view == VIEW_MAIN) {
@@ -944,7 +951,18 @@ int main(void) {
 
                 case KEY3:
                     title = "Check Status";
-                    Display_Notice("Details of network setup.");
+                    switch (Wls_CheckSim()) {
+                        case WLS_OK: Display_Notice("SIM status OK."); break;
+                        case WLS_NOSIM: Display_Notice("No SIM found."); break;
+                        case WLS_NEEDPIN: Display_Notice("PIN needed for SIM."); break;
+                        case WLS_NEEDPUK: Display_Notice("PUK needed for SIM."); break;
+                        case WLS_RSPERR: Display_Notice("SIM module error."); break;
+                        case WLS_NORSP: Display_Notice("SIM no response."); break;
+                        case WLS_UNKNOWNTYPE: Display_Notice("SIM status OK."); break;
+                        case WLS_PORTERR: Display_Notice("Wireless port error."); break;
+                        case WLS_OTHERR:
+                        default: Display_Notice("Unknown error\noccurred."); break;
+                    }
                     break;
 
                 case KEYCANCEL:

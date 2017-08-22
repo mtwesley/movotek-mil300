@@ -51,10 +51,13 @@
 #define PRN_FONT_LARGE   24, 24, 0
 
 #define TIMER_1SEC   1 * 10
+#define TIMER_2SEC   2 * 10
 #define TIMER_5SEC   5 * 10
 #define TIMER_10SEC  10 * 10
+#define TIMER_30SEC  30 * 10
 
-#define TIMER_TOPBAR  1
+#define TIMER_TOPBAR   1
+#define TIMER_WAITING  2
 
 #define BATTERY_LEVEL5  8200
 #define BATTERY_LEVEL4  7500

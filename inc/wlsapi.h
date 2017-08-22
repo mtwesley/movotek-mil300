@@ -20,7 +20,7 @@ extern "C" {
 #endif
 
 
-#define TM_WLS                  3               //ÎÞÏß¶¨Ê±Æ÷£¬ÓÃÓÚCOM ½ÓÊÕ³¬Ê±
+#define TM_WLS                  3               //ï¿½ï¿½ï¿½ß¶ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½COM ï¿½ï¿½ï¿½Õ³ï¿½Ê±
 
 #define SIM_NO_MAX              2
 #define SIM_NO_1                0
@@ -33,7 +33,7 @@ extern "C" {
 //Module status related macros
 #define WLS_UNKNOWN             0x00 
 #define WLS_GPRS_SIM340W        0x01  
-#define WLS_GPRS_G610        		0x02
+#define WLS_GPRS_G610        	0x02
 
 #define TCP_PROTOCOL            0
 #define UDP_PROTOCOL            1
@@ -86,21 +86,21 @@ extern "C" {
 #define WLS_ATTACHING           (-5522)     //the module is looking for the base station.
 #define WLS_NOBOARD             (-5523)     //no GPRS or CDMA board exist
 #define WLS_UNKNOWNTYPE         (-5524)     //unknown type
-#define WLS_DIALERR             (-5525)     //ÓÃ»§ÃûºÍÃÜÂë×¢²á±»ÍøÂç²à¾Ü¾ø£¬»òÕßAPN´íÎó£¬¿¨Ç··ÑµÈ
+#define WLS_DIALERR             (-5525)     //ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×¢ï¿½á±»ï¿½ï¿½ï¿½ï¿½ï¿½Ü¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½APNï¿½ï¿½ï¿½ó£¬¿ï¿½Ç·ï¿½Ñµï¿½
 #define WLS_TCPSENDERR          (-5526)     //TCP socket send  err
 #define WLS_TCPCONNECTOVERTIME  (-5527)     //TCP connect overtime 
 #define WLS_DIALING             (-5528)     //dialing 
 #define WLS_PORTERR             (-5529)     //serial port error
 #define WLS_PORTINUSE           (-5530)     //serial port is in use by another program 
-#define WLS_DETECTERR           (-5531)     //Ê¶±ðÎÞÏßÄ£¿é´íÎó£¨ÉèÖÃVPOSÓëÎÞÏßÄ£¿éÍ¨ÐÅ´íÎó£©
-#define WLS_SOCKETOVERRUN       (-5532)     //´ò¿ªTCP socketÁ¬½Ó¹ý¶à,ÒÑ³¬¹ý3¸ö,Òç³ö 
-#define WLS_OTHERR              (-5533)     //ÆäËû´íÎó
+#define WLS_DETECTERR           (-5531)     //Ê¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½VPOSï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£ï¿½ï¿½Í¨ï¿½Å´ï¿½ï¿½ï¿½
+#define WLS_SOCKETOVERRUN       (-5532)     //ï¿½ï¿½TCP socketï¿½ï¿½ï¿½Ó¹ï¿½ï¿½ï¿½,ï¿½Ñ³ï¿½ï¿½ï¿½3ï¿½ï¿½,ï¿½ï¿½ï¿½ 
+#define WLS_OTHERR              (-5533)     //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 #define WLS_TCPCONNECTREFUSE    (-5534)   
-#define WLS_NOTSUPPORT					(-5535)
-#define WLS_TIMEOUT    					(-5536)
-#define WLS_NoUNReadMessage			(-5537)
+#define WLS_NOTSUPPORT			(-5535)
+#define WLS_TIMEOUT    			(-5536)
+#define WLS_NoUNReadMessage		(-5537)
 #define WLS_TCPSENDTIMEOUT      (-5538)     //send timeout
-#define WLS_SIMLOCK				      (-5539)     //SIM card locked
+#define WLS_SIMLOCK				(-5539)     //SIM card locked
 /***********************************************************************/
 
 //------API-----------------------------------------------------------------
