@@ -171,17 +171,17 @@ static int view     = VIEW_WAITING;
 static int status   = STATUS_UNKNOWN;
 
 void Refresh_Settings(void) {
-    unsigned char *value;
+    unsigned char value[2] = "\0";
 
     // Display
     if (Lib_FileGetEnv("LCDGRAY", value) == 0) Lib_LcdSetGray(((value[0] - 0x30) + 4) * 11);
-    if (Lib_FileGetEnv("BCKLIGHT", value) == 0) Lib_LcdSetBackLight(value[0] - 0x30);
-    
+    if (Lib_FileGetEnv("BCKLIGHT", value) == 0) Lib_LcdSetBackLight(value[0]);
+
     // Sound
-    if (Lib_FileGetEnv("KBMUTE", value) == 0) Lib_KbMute(value[0] - 0x30);
-    
+    if (Lib_FileGetEnv("KBMUTE", value) == 0) Lib_KbMute(value[0]);
+
     // Network
-    if (Lib_FileGetEnv("SIMNO", value) == 0) Wls_SelectSim(value[0] - 0x30);
+    if (Lib_FileGetEnv("SIMNO", value) == 0) Wls_SelectSim(value[0]);
 
     // Printer
     if (Lib_FileGetEnv("PRNGRAY", value) == 0) Lib_PrnSetGray((value[0] - 0x30) + 3);
@@ -198,8 +198,14 @@ void Clear_Content(void) {
 }
 
 void Display_Loading(int level) {
-	Lib_LcdSetFont(LCD_FONT_MEDIUM);
-	Lib_LcdGotoxy(0, 26);
+	// draw logo
+    Lib_LcdCls();
+	Lib_LcdGotoxy(0, 2);
+	Lib_LcdDrawLogo(g_Display_logo_128);
+	Lib_LcdGotoxy(0, 64 - 14);
+
+	// draw text
+	Lib_LcdSetFont(LCD_FONT_SMALL);
 	
 	if (level == 0)      Lib_Lcdprintf("    Loading (0%%)     ");
 	else if (level <= 3) Lib_Lcdprintf("    Loading (25%%)    ");
@@ -271,11 +277,11 @@ void Display_Time() {
     // week   = (datetime[6] >> 4) * 10 + (datetime[6] & 0x0f);
     // if (datetime[0] <= 0x49) year += 100;
 
-    if (hour < 1)       Lib_LcdPrintxy(24, 2, 0x80,  "   12:%02d AM  ", minute);
-    else if (hour < 10) Lib_LcdPrintxy(24, 2, 0x80, "    %d:%02d AM  ", hour, minute);
-    else if (hour < 12) Lib_LcdPrintxy(24, 2, 0x80,  "    %d:%02d AM ", hour, minute);
-    else if (hour < 13) Lib_LcdPrintxy(24, 2, 0x80,  "    12:%02d PM ", minute);
-    else if (hour > 12) Lib_LcdPrintxy(24, 2, 0x80,  "    %d:%02d PM ", hour - 12, minute);
+    if (hour < 1)       Lib_LcdPrintxy(24, 2, 0x80,  "  12:%02d AM  ", minute);
+    else if (hour < 10) Lib_LcdPrintxy(24, 2, 0x80, "   %d:%02d AM  ", hour, minute);
+    else if (hour < 12) Lib_LcdPrintxy(24, 2, 0x80,  "   %d:%02d AM ", hour, minute);
+    else if (hour < 13) Lib_LcdPrintxy(24, 2, 0x80,  "   12:%02d PM ", minute);
+    else if (hour > 12) Lib_LcdPrintxy(24, 2, 0x80,  "   %d:%02d PM ", hour - 12, minute);
 }
 
 void Display_Topbar(int force) {
@@ -399,8 +405,6 @@ int View_List(char **list, int scroll) {
     while (len) {
         int count = 0;
         char** temp = (list + ((scroll / lines) * lines));
-
-        sprintf(title, "%d, %d", count, scroll);
 
         Clear_Content();
         Display_Topbar(TRUE);
@@ -574,18 +578,27 @@ int main(void) {
     Lib_LcdClrDotBuf();
     Lib_KbFlush();
 
-	Display_Loading(0);
-	// Lib_DelayMs(1000);
+    // Loading
+ 	Display_Loading(0);
+	Lib_DelayMs(1500);
+
+    Lib_Beef(6, 300);
+    Lib_Beef(3, 500);
+
+	Display_Loading(3);
+	Lib_DelayMs(1500);
+
+ 	Display_Loading(6);
+	Lib_DelayMs(1500);
 
     // reset communication ports
- 	Display_Loading(3);
     Lib_ComReset(COM1);
     Lib_ComReset(COM2);
     Lib_ComReset(AT_COM);
     // Lib_UsbReset(); // FIXME: find the port number for USB
 
- 	Display_Loading(6);
-	// Lib_DelayMs(1000);
+ 	Display_Loading(9);
+	Lib_DelayMs(0);
 
     // initialize wireless
     Wls_Reset();
@@ -626,19 +639,9 @@ int main(void) {
 	// Lib_DelayMs(100);
     // Lib_Beef(6, 2000);
 
-    Lib_Beef(6, 200);
-    Lib_Beef(3, 300);
-	Lib_DelayMs(100);
-    Lib_Beef(6, 200);
-    Lib_Beef(3, 300);
-	Lib_DelayMs(100);
-    Lib_Beef(6, 200);
-    Lib_Beef(3, 300);
-	Lib_DelayMs(100);
-    Lib_Beef(6, 200);
-    Lib_Beef(3, 300);
-	Lib_DelayMs(100);
-
+    // Lib_Beef(6, 150);
+    // Lib_Beef(3, 250);
+    
 	while (TRUE) {
         Lib_LcdCls();
         Lib_LcdClrDotBuf();
