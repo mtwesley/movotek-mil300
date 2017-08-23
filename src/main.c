@@ -174,18 +174,15 @@ void Refresh_Settings(void) {
     unsigned char value[2] = "\0";
 
     // Display
-    if (Lib_FileGetEnv("LCDGRAY", value) == 0) Lib_LcdSetGray(((value[0] - 0x30) + 4) * 11);
-    if (Lib_FileGetEnv("BCKLIGHT", value) == 0) Lib_LcdSetBackLight(value[0]);
+    if (!Lib_FileGetEnv("LCDGRAY", value)) Lib_LcdSetGray(((value[0] - 0x30) + 4) * 11);
+    if (!Lib_FileGetEnv("BCKLIGHT", value)) Lib_LcdSetBackLight(value[0]);
 
     // Sound
-    if (Lib_FileGetEnv("KBMUTE", value) == 0) Lib_KbMute(value[0]);
-
-    // Network
-    if (Lib_FileGetEnv("SIMNO", value) == 0) Wls_SelectSim(value[0]);
+    if (!Lib_FileGetEnv("KBMUTE", value)) Lib_KbMute(value[0]);
 
     // Printer
-    if (Lib_FileGetEnv("PRNGRAY", value) == 0) Lib_PrnSetGray((value[0] - 0x30) + 3);
-    if (Lib_FileGetEnv("PRNSPEED", value) == 0) Lib_PrnSetSpeed(((value[0] - 0x30) * 10) + 13);
+    if (!Lib_FileGetEnv("PRNGRAY", value)) Lib_PrnSetGray((value[0] - 0x30) + 3);
+    if (!Lib_FileGetEnv("PRNSPEED", value)) Lib_PrnSetSpeed(((value[0] - 0x30) * 10) + 13);
 }
 
 void Clear_Topbar(void) {
@@ -207,7 +204,8 @@ void Display_Loading(int level) {
 	// draw text
 	Lib_LcdSetFont(LCD_FONT_SMALL);
 	
-	if (level == 0)      Lib_Lcdprintf("    Loading (0%%)     ");
+    if (level < 0);
+	else if (level == 0) Lib_Lcdprintf("    Loading (0%%)     ");
 	else if (level <= 3) Lib_Lcdprintf("    Loading (25%%)    ");
 	else if (level <= 6) Lib_Lcdprintf("    Loading (50%%)    ");
 	else if (level <= 9) Lib_Lcdprintf("    Loading (75%%)    ");
@@ -226,7 +224,7 @@ void Display_Signal() {
             Lib_LcdDrawLogo(g_Display_icon_sig_4); break;
         
         case SIGNAL_STRONG:
-            Lib_LcdDrawLogo(g_Display_icon_sig_3); break;
+            Lib_LcdDrawLogo(g_Display_icon_sig_4); break;
         
         case SIGNAL_NORMAL:
             Lib_LcdDrawLogo(g_Display_icon_sig_3); break;
@@ -278,10 +276,10 @@ void Display_Time() {
     // if (datetime[0] <= 0x49) year += 100;
 
     if (hour < 1)       Lib_LcdPrintxy(24, 2, 0x80,  "  12:%02d AM  ", minute);
-    else if (hour < 10) Lib_LcdPrintxy(24, 2, 0x80, "   %d:%02d AM  ", hour, minute);
-    else if (hour < 12) Lib_LcdPrintxy(24, 2, 0x80,  "   %d:%02d AM ", hour, minute);
-    else if (hour < 13) Lib_LcdPrintxy(24, 2, 0x80,  "   12:%02d PM ", minute);
-    else if (hour > 12) Lib_LcdPrintxy(24, 2, 0x80,  "   %d:%02d PM ", hour - 12, minute);
+    else if (hour < 10) Lib_LcdPrintxy(24, 2, 0x80,  "   %d:%02d AM   ", hour, minute);
+    else if (hour < 12) Lib_LcdPrintxy(24, 2, 0x80,  "  %d:%02d AM  ", hour, minute);
+    else if (hour < 13) Lib_LcdPrintxy(24, 2, 0x80,  "  12:%02d PM  ", minute);
+    else if (hour > 12) Lib_LcdPrintxy(24, 2, 0x80,  "   %d:%02d PM   ", hour - 12, minute);
 }
 
 void Display_Topbar(int force) {
@@ -296,16 +294,16 @@ void Display_Topbar(int force) {
         if (title != NULL) Display_Title(title);
         else Display_Time();
 
-        Lib_SetTimer(TIMER_TOPBAR, TIMER_2SEC);
+        Lib_SetTimer(TIMER_TOPBAR, TIMER_5SEC);
     }
 }
 
 unsigned char Display_Waiting(int force) {
-    unsigned int len;
-    unsigned char * phone, timestamp, msg, len;
+    unsigned int *len;
+    unsigned char *phone, *timestamp, *msg;
     unsigned char ucKey;
 
-	if (!Lib_CheckTimer(TIMER_TOPBAR) || force) {
+	if (!Lib_CheckTimer(TIMER_WAITING) || force) {
         // draw logo
         Lib_LcdCls();
         Lib_LcdGotoxy(0, 2);
@@ -319,8 +317,18 @@ unsigned char Display_Waiting(int force) {
         // wait for OK, ESC, CANCEL, or MENU
         Lib_KbFlush();
         while (TRUE) {
+            int iRes = Wls_Readmessage(phone, timestamp, msg, len);
+            Lib_Beef(6,300);
+            Lib_Beef(3,300);
+            // Lib_DelayMs(500);
+            // Lib_Beef(6, 300);
+            // Lib_Beef(3, 300);
+            char *text;
+            sprintf(text, "Message: %i, %s", iRes, *msg);
+            Lib_LcdGotoxy(0, 64 - 14);
+            Lib_Lcdprintf(text);
+            Lib_DelayMs(5000);
             if (Lib_KbCheck()) continue;
-            if (!Wls_Readmessage(phone, timestamp, msg, len)) Display_Notice("Message received!");
 
             ucKey = Lib_KbGetCh();
             switch (ucKey) {
@@ -331,12 +339,12 @@ unsigned char Display_Waiting(int force) {
                 case KEYMENU:
                 case KEYENTER:
                 case KEYOK:
-                    Lib_SetTimer(TIMER_WAITING, TIMER_30SEC);                
+                    Lib_SetTimer(TIMER_WAITING, TIMER_30SEC);
                     return ucKey;
             }
         }
-        return -1;
     }
+    return 0;
 }
 
 unsigned char View_Menu(char **menu) {
@@ -348,13 +356,14 @@ unsigned char View_Menu(char **menu) {
     // menu length
     while (menu[len++] != NULL); len--;
 
+    Clear_Content();
+    Display_Topbar(TRUE);
+
     // scrolling
     while (len) {
         int count = 0;
         char** temp = (menu + scroll);
 
-        Clear_Content();
-        Display_Topbar(TRUE);
         Lib_LcdSetFont(LCD_FONT_MEDIUM);
         Lib_LcdGotoxy(0, 14);
         
@@ -368,7 +377,7 @@ unsigned char View_Menu(char **menu) {
 			int breakout = FALSE;
 
             Display_Topbar(FALSE);
-            Display_Waiting(FALSE);
+            if (Display_Waiting(FALSE)) break;
 
             if (Lib_KbCheck()) continue;
             ucKey = Lib_KbGetCh();
@@ -408,14 +417,15 @@ int View_List(char **list, int scroll) {
 
     if (scroll < 0 || len < scroll) scroll = 0;
 
+    Display_Topbar(TRUE);
+    Lib_LcdSetFont(LCD_FONT_MEDIUM);
+
     // scrolling
     while (len) {
         int count = 0;
         char** temp = (list + ((scroll / lines) * lines));
 
         Clear_Content();
-        Display_Topbar(TRUE);
-        Lib_LcdSetFont(LCD_FONT_MEDIUM);
         Lib_LcdGotoxy(0, 14);
         
         while (*temp != NULL && count < lines) {
@@ -429,6 +439,7 @@ int View_List(char **list, int scroll) {
 			int breakout = FALSE;
 
             Display_Topbar(FALSE);
+            if (Display_Waiting(FALSE)) break;
 
             if (Lib_KbCheck()) continue;
             ucKey = Lib_KbGetCh();
@@ -489,6 +500,7 @@ int Display_Confirm(char *message, char *yes, char *no) {
         int breakout = FALSE;
 
         Display_Topbar(FALSE);
+        if (Display_Waiting(FALSE)) break;
 
         if (Lib_KbCheck()) continue;
         ucKey = Lib_KbGetCh();
@@ -510,7 +522,7 @@ int Display_Confirm(char *message, char *yes, char *no) {
     return 0;
 }
 
-void Display_Notice(char *message) {
+int Display_Notice(char *message) {
     unsigned char ucKey;
 
     Clear_Content();
@@ -528,6 +540,7 @@ void Display_Notice(char *message) {
     Lib_KbFlush();
     while (TRUE) {
         Display_Topbar(FALSE);
+        if (Display_Waiting(FALSE)) break;
 
         if (Lib_KbCheck()) continue;
         ucKey = Lib_KbGetCh();
@@ -586,11 +599,13 @@ int main(void) {
     Lib_KbFlush();
 
     // Loading
+ 	Display_Loading(-1);
+ 	Lib_DelayMs(500);
+    Lib_Beef(6, 300);
+    Lib_Beef(3, 300);
+
  	Display_Loading(0);
 	Lib_DelayMs(1500);
-
-    Lib_Beef(6, 300);
-    Lib_Beef(3, 500);
 
 	Display_Loading(3);
 	Lib_DelayMs(1500);
@@ -608,6 +623,7 @@ int main(void) {
 	Lib_DelayMs(0);
 
     // initialize wireless
+    Wls_SelectSim((int)list_env_value[0]);
     Wls_Reset();
     if (Wls_Init()) return 1;
 
@@ -940,6 +956,7 @@ int main(void) {
                         default:
                             list_env_value[0] = list_value;
                             Lib_FilePutEnv("SIMNO", list_env_value);
+                            Wls_SelectSim((int)list_env_value[0]);
                             view = VIEW_SETTINGS_NETWORK;
                     }
                     break;
@@ -1022,7 +1039,7 @@ int main(void) {
             view = VIEW_WAITING;
             title = NULL;
         }
-	}
+    }
 	return 1;			
 }
 
