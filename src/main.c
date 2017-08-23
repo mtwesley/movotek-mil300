@@ -317,20 +317,21 @@ unsigned char Display_Waiting(int force) {
         // wait for OK, ESC, CANCEL, or MENU
         Lib_KbFlush();
         while (TRUE) {
-            int iRes = Wls_Readmessage(phone, timestamp, msg, len);
-            Lib_Beef(6,300);
-            Lib_Beef(3,300);
+            // int iRes = Wls_Readmessage(phone, timestamp, msg, len);
+            // Lib_Beef(6,300);
+            // Lib_Beef(3,300);
             // Lib_DelayMs(500);
             // Lib_Beef(6, 300);
             // Lib_Beef(3, 300);
-            char *text;
-            sprintf(text, "Message: %i, %s", iRes, *msg);
-            Lib_LcdGotoxy(0, 64 - 14);
-            Lib_Lcdprintf(text);
-            Lib_DelayMs(5000);
+            // char *text;
+            // sprintf(text, "Message: %i, %s", iRes, *msg);
+            // Lib_LcdGotoxy(0, 64 - 14);
+            // Lib_Lcdprintf(text);
+            // Lib_DelayMs(5000);
+            
             if (Lib_KbCheck()) continue;
-
             ucKey = Lib_KbGetCh();
+            
             switch (ucKey) {
                 // case KEYCANCEL:
                 // case KEYCLEAR:
