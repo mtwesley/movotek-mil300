@@ -41,6 +41,9 @@ $(LOCOBJ)\main.o: $(LOCSRC)\main.c
 $(LOCOBJ)\public.o: $(LOCSRC)\public.c
         $(GCC) $(LOCSRC)\public.c -o $(LOCOBJ)\public.o
 
+$(LOCOBJ)\sms_pdu.o: $(LOCSRC)\sms_pdu.c
+        $(GCC) $(LOCSRC)\sms_pdu.c -o $(LOCOBJ)\sms_pdu.o
+
 clean:
         del $(LOCOBJ)\*.o
         del *.bin
