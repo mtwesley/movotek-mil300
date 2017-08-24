@@ -8,6 +8,7 @@
 #include "logos.h"
 #include "icons.h"
 #include "topbar.h"
+#include "sms_pdu.h"
 
 #define VIEW_WAITING      0
 #define VIEW_MAIN         1
