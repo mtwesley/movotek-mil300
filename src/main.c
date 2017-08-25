@@ -300,8 +300,8 @@ void Display_Topbar(int force) {
 }
 
 unsigned char Display_Waiting(int force) {
-    uchar buf[120];
-    uchar *p;
+    ushort len;
+    unsigned char *rsp;
     unsigned char ucKey;
 
 	if (!Lib_CheckTimer(TIMER_WAITING) || force) {
@@ -317,18 +317,21 @@ unsigned char Display_Waiting(int force) {
 
         // wait for OK, ESC, CANCEL, or MENU
         Lib_KbFlush();
-        while (TRUE) {
-            ushort len;
-            char *text;
-            uchar *rsp;
+
+        // start wireless module
+        Wls_Init();
+        Wls_SendCmd("AT+CMGF=0\r", rsp, len, 1000);
+        
+        int has_message = FALSE;
+
+        while (TRUE) {            
+            if (has_message) {
+                Lib_Beef(6,300);
+                Lib_Beef(3,300);
+                Lib_DelayMs(600);
+            }
             
-            Lib_Beef(6,300);
-            Lib_Beef(3,300);
-            Lib_DelayMs(1000);
-            
-            Wls_Init();
-            memset(buf, 0, sizeof(buf));
-            switch (Wls_SendCmd("AT+CMGR=1\r", rsp, len, 1000)) {
+            if (!Wls_SendCmd("AT+CMGR=1\r", rsp, len, 1000)) {
                 case WLS_PARAMERR: text = "Parameter error"; break;
                 case WLS_RSPERR: text = "Module error"; break;
                 case WLS_NORSP: text = "No response"; break;
@@ -337,46 +340,6 @@ unsigned char Display_Waiting(int force) {
                     sprintf(text, "Length: %i\nMessage: %s", len, rsp);
                     break;
             }
-
-            Lib_LcdCls();
-            Lib_LcdGotoxy(0, 2);
-            Lib_Lcdprintf(text);
-            Lib_DelayMs(5000);
-
-            // int *iRes;
-            // unsigned int len;
-            // unsigned char *phone, *timestamp, *msg;
-            
-            // Lib_Beef(6,300);
-            // Lib_Beef(3,300);
-            // Lib_DelayMs(1000);
-
-            // iRes = Wls_Readmessage(phone, timestamp, msg, len);
-            
-            // if (iRes) {
-            //     Lib_Beef(6, 300);
-            //     Lib_Beef(3, 300);
-            //     char *text;
-            //     sprintf(text, "Return: %i\nMessage: %s", iRes, *msg);
-
-            //     Lib_LcdCls();
-            //     Lib_LcdGotoxy(0, 2);
-            //     Lib_Lcdprintf(text);
-            //     Lib_DelayMs(5000);
-            // } else {
-            //     Lib_LcdGotoxy(0, 2);
-            //     // Lib_Lcdprintf("Message found");
-            //     Lib_DelayMs(5000);
-            // }
-
-            // if (Wls_GetModuleType(moduletype)) text = "Error";
-            // else switch (*moduletype) {
-            //     case WLS_UNKNOWN: text = "Unknown"; break;
-            //     case WLS_GPRS_SIM340W: text = "SIM 340W"; break;
-            //     case WLS_GPRS_G610: text = "G610"; break;
-            //     default: text = "Default";
-            // }
-    
             
             if (Lib_KbCheck()) continue;
             ucKey = Lib_KbGetCh();
