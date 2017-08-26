@@ -300,8 +300,11 @@ void Display_Topbar(int force) {
 }
 
 unsigned char Display_Waiting(int force) {
-    ushort len;
-    unsigned char *rsp;
+    sms_t sms;
+    ushort len, pdu_len;
+    int has_message;
+    char *msg, *phone;
+    unsigned char *rsp, *tmp, *pdu;
     unsigned char ucKey;
 
 	if (!Lib_CheckTimer(TIMER_WAITING) || force) {
@@ -322,23 +325,21 @@ unsigned char Display_Waiting(int force) {
         Wls_Init();
         Wls_SendCmd("AT+CMGF=0\r", rsp, len, 1000);
         
-        int has_message = FALSE;
+        has_message = FALSE;
 
         while (TRUE) {            
-            if (has_message) {
-                Lib_Beef(6,300);
-                Lib_Beef(3,300);
-                Lib_DelayMs(600);
-            }
-            
-            if (!Wls_SendCmd("AT+CMGR=1\r", rsp, len, 1000)) {
-                case WLS_PARAMERR: text = "Parameter error"; break;
-                case WLS_RSPERR: text = "Module error"; break;
-                case WLS_NORSP: text = "No response"; break;
-                case WLS_PORTERR: text = "Comm error"; break;
-                case WLS_OK: 
-                    sprintf(text, "Length: %i\nMessage: %s", len, rsp);
-                    break;
+            if (!Wls_SendCmd("AT+CMGL=0\r", rsp, len, 3000)) {
+                has_message = TRUE;
+                tmp = rsp;
+                while (pdu = (strstr(tmp, "\r\n") + 2)) {
+                    pdu_len = pdu - tmp;                    
+                    if (!sms_decode_pdu(pdu, pdu_len, &sms)) {
+                        strncpy(msg, sms->message, sms->message_length);
+                        strncpy(phone, sms->telnum, sms->telnum_length);
+                        Display_Notice("%s (%s)", msg, phone);
+                    }                    
+                    tmp = pdu;
+                }
             }
             
             if (Lib_KbCheck()) continue;
