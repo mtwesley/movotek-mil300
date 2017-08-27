@@ -1,8 +1,6 @@
 #ifndef SMS_PDU_H
 #define	SMS_PDU_H
 
-#include <stdint.h>
-
 #define SMS_MESSAGE_SIZE    161
 #define SMS_MULTIPART_SIZE  154
 #define SMS_SENDER_SIZE     25
@@ -10,11 +8,20 @@
 #define SMS_SINGLE          0x01
 #define SMS_MULTIPART       0x41
 
+typedef signed char        int8_t;
+typedef short              int16_t;
+typedef int                int32_t;
+typedef long long          int64_t;
+typedef unsigned char      uint8_t;
+typedef unsigned short     uint16_t;
+typedef unsigned int       uint32_t;
+typedef unsigned long long uint64_t;
+
 /* 
 * Please refer to:
 *   http://www.dreamfabric.com/sms/type_of_address.html
 */    
-    typedef struct {
+typedef struct {
     int id;
     uint8_t message_type;
     uint8_t message[SMS_MESSAGE_SIZE];

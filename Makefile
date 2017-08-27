@@ -23,7 +23,7 @@ GCC       = $(GCCDIR)\BIN\arm-elf-gcc -O3 -I$(GCCINC) -I$(LOCINC) -mlittle-endia
 LINK      = $(GCCDIR)\BIN\arm-elf-ld -Tldscript -L$(GCCLIB) -L$(GCCLIBELF) -L$(JOSLIBDIR)
 CCFLAG	  = -O3 -I.\build\include -mlittle-endian -mcpu=arm9
 
-OBJ       = $(LOCOBJ)\init.o $(LOCOBJ)\main.o $(LOCOBJ)\public.o
+OBJ       = $(LOCOBJ)\init.o $(LOCOBJ)\main.o $(LOCOBJ)\public.o $(LOCOBJ)\sms_pdu.o 
 		 
 #  ADS-ROM version
 $(NAME).elf: $(OBJ)
