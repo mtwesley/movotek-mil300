@@ -14,7 +14,7 @@ static inline char hex2c(uint8_t d)
 /*
  * http://twit88.com/home/utility/sms-pdu-encode-decode
  */
-static int decode7(uint8_t *in, size_t in_sz, uint8_t *out, size_t out_sz)
+static int decode7(uint8_t *in, size_t in_sz, uint8_t *out, size_t out_sz, uint8_t padd)
 {
     size_t out_len_max = (in_sz * 8) / 7;
 
@@ -44,13 +44,20 @@ static int decode7(uint8_t *in, size_t in_sz, uint8_t *out, size_t out_sz)
     return 0;
 }
 
-static int encode7(uint8_t *in, size_t in_sz, uint8_t *out, size_t out_sz)
+static int encode7(uint8_t *in, size_t in_sz, uint8_t *out, size_t out_sz, uint8_t padd)
 {
     size_t out_len_max = ((in_sz * 7) / 8 + 1);
 
     if ( out_len_max > out_sz ) {
         return -1;
     }
+
+    // if ( padd ) {
+    //    int bits = 7 - padd;
+    //    *out++ = in[0] << (7 - bits);
+    //    (*out)++;
+    //    bits++;
+    // }
 
     int j = 0;
     for ( int i = 0, shift = 7; (i < in_sz) && (j < out_sz); ++i, ++j, --shift ) {
@@ -172,48 +179,96 @@ int sms_decode_pdu(const char *data, size_t sz, sms_t *sms)
     uint32_t smc_length;
     sscanf(pdata, "%02X", &smc_length);
     pdata += 2;
+
     /* skip SMC information */
     pdata += (smc_length * 2);
-    /* skip first octet of this SMS-DELIVER message. */
+    
+    /* read first octet of this SMS-DELIVER message. */
+    uint32_t message_type;
+    sscanf(pdata, "%02X", &message_type);
     pdata += 2;
+    sms->message_type = message_type;
+    
     /* read sender number length */
     uint32_t num_length;
     sscanf(pdata, "%02X", &num_length);
     pdata += 2;
-    sms->sender_length = num_length;
+    sms->telnum_length = num_length;
     num_length = ((num_length % 2) == 0 ? num_length : num_length + 1);
+    
     /* read type of address of the sender number */
     uint32_t sender_addr_type;
     sscanf(pdata, "%02X", &sender_addr_type);
     pdata += 2;
     sms->telnum_type = sender_addr_type;
+    
     /* read phone number */
     decode_telnum(pdata, num_length, sms);
     pdata += num_length;
+    
     /* skip protocol identifier */
     pdata += 2;
+    
     /* read data coding scheme */
     unsigned int data_coding;
     sscanf(pdata, "%02X", &data_coding);
     pdata += 2;
+    
     /* skip timestamp */
     pdata += 14;
+    
     /* read user data length */
     uint32_t user_data_length;
+    uint8_t user_data_padding = 0;
     sscanf(pdata, "%02X", &user_data_length);
     pdata += 2;
 
+    /* read user data header; if present */
+    if (message_type == SMS_MULTIPART) {
+        /* read user data header length */
+        uint32_t user_data_header_length;
+        sscanf(pdata, "%02X", &user_data_header_length);
+        pdata += 2;
+ 
+        /* skip information element identifier and data length */
+        pdata += 4;
+    
+        /* read reference numnber */
+        uint32_t message_reference;
+        sscanf(pdata, "%02X", &message_reference);
+        pdata += 2;
+        sms->message_reference = message_reference;
+ 
+        /* read total parts */
+        uint32_t message_parts;
+        sscanf(pdata, "%02X", &message_parts);
+        pdata += 2;
+        sms->message_parts = message_parts;
+ 
+        /* read part numnber */
+        uint32_t message_number;
+        sscanf(pdata, "%02X", &message_number);
+        pdata += 2;
+        sms->message_number = message_number;
+
+        /* calculate padding bits */
+        // padd = ((user_data_header_length + 1 ) * 8 ) % 7;
+        // if( padd ) user_data_padding = 7 - padd;
+        user_data_padding = 1; // padding is always 1
+ 
+        /* re-calculate user data length */
+        user_data_length -= 12;
+    }
+
     int decode_success = 0;
     if ( data_coding == 0x00 ) {
-
         /* decode octet string to binary data */
         uint8_t decode[SMS_MESSAGE_SIZE];
         size_t decode_sz = decode_stroctet(pdata, user_data_length * 2, decode, SMS_MESSAGE_SIZE);
 
         if ( decode_sz >= 0 ) {
-
             /* decode 8 bit to 7 bit */
-            int dec7_res = decode7(decode, user_data_length, sms->message, SMS_MESSAGE_SIZE);
+            int dec7_res = decode7(decode, user_data_length, sms->message, SMS_MESSAGE_SIZE, user_data_padding);
 
             if ( dec7_res == 0 ) {
                 /* set data length */
@@ -255,7 +310,7 @@ int sms_encode_pdu(sms_t *sms, char *data, size_t sz)
 
     bzero(data, sz);
 
-    size_t buf_sz = 9 + ((sms->sender_length % 2) == 0 ? sms->sender_length : sms->sender_length + 1) / 2 + ((sms->message_length * 7) / 8 + 1);
+    size_t buf_sz = 9 + ((sms->telnum_length % 2) == 0 ? sms->telnum_length : sms->telnum_length + 1) / 2 + ((sms->message_length * 7) / 8 + 1);
 
     if ( sz < (buf_sz * 2) ) {
         return -1;
@@ -269,17 +324,29 @@ int sms_encode_pdu(sms_t *sms, char *data, size_t sz)
     uint8_t *pbuf = buf;
     *(pbuf++) = 0x00; /* Length of SMSC information */
     *(pbuf++) = 0x11; /* First octet of the SMS-SUBMIT message. */
-    *(pbuf++) = 0x00; /* TP-Message-Reference. The "00" value here lets the phone set the message reference number itself. */
-    *(pbuf++) = (uint8_t) sms->sender_length;
+    *(pbuf++) = sms->message_number ? sms->message_number : 0x00; /* TP-Message-Reference. The "00" value here lets the phone set the message reference number itself. */
+    *(pbuf++) = (uint8_t) sms->telnum_length;
     *(pbuf++) = sms->telnum_type;
-    int num_sz = encode_telnum(sms->telnum, sms->sender_length, pbuf, buf_sz - (pbuf - buf));
+    int num_sz = encode_telnum(sms->telnum, sms->telnum_length, pbuf, buf_sz - (pbuf - buf));
     if ( num_sz >= 0 ) {
         pbuf += num_sz;
     }
     *(pbuf++) = 0x00; /* TP-PID. Protocol identifier */
     *(pbuf++) = 0x00; /* TP-DCS. Data coding scheme.This message is coded according to the 7bit default alphabet. */
-    *(pbuf++) = 0xAA; /* TP-Validity-Period. "AA" means 4 days. */
-    int enc7_sz = encode7(sms->message, sms->message_length, pbuf + 1, buf_sz - (pbuf - buf) - 1);
+    *(pbuf++) = 0xA7; /* TP-Validity-Period. "A7" means 24 hours. */
+    if (sms->message_type == SMS_MULTIPART) {
+        *(pbuf++) = 0×05; /* UDHL. User data header length */
+        *(pbuf++) = 0×00; /* IEI. Information element identifier */
+        *(pbuf++) = 0×03; /* IEDL. Information element data length */
+        *(pbuf++) = sms->message_reference; /* Message reference number */
+        *(pbuf++) = sms->message_parts; /* Message total parts */
+        *(pbuf++) = sms->message_number; /* Mess part number */
+        // padd = ((0×05 + 1 ) * 8 ) % 7;
+        // if ( padd ) user_data_padding = 7 - padd;
+        padd = 1; // padding is always one
+    } else padd = 0;
+    // *(pbuf++) = 0xAA; /* TP-Validity-Period. "AA" means 4 days. */
+    int enc7_sz = encode7(sms->message, sms->message_length, pbuf + 1, buf_sz - (pbuf - buf) - 1, padd);
     if ( enc7_sz >= 0 ) {
         *(pbuf++) = (uint8_t) sms->message_length;
         pbuf += enc7_sz;

@@ -4,19 +4,27 @@
 #include <stdint.h>
 
 #define SMS_MESSAGE_SIZE    161
+#define SMS_MULTIPART_SIZE  154
 #define SMS_SENDER_SIZE     25
 
-typedef struct {
+#define SMS_SINGLE          0x01
+#define SMS_MULTIPART       0x41
+
+/* 
+* Please refer to:
+*   http://www.dreamfabric.com/sms/type_of_address.html
+*/    
+    typedef struct {
     int id;
+    uint8_t message_type;
     uint8_t message[SMS_MESSAGE_SIZE];
     size_t message_length;
+    uint8_t message_reference;
+    uint8_t message_parts;
+    uint8_t message_number;
+    uint8_t telnum_type;
     char telnum[SMS_SENDER_SIZE];
     size_t telnum_length;
-   /* 
-    * Please refer to:
-    *   http://www.dreamfabric.com/sms/type_of_address.html
-    */    
-    uint8_t telnum_type;
 } sms_t;
 
 /*
