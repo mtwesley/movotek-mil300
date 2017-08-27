@@ -287,13 +287,12 @@ void Display_Topbar(int force) {
 	if (!Lib_CheckTimer(TIMER_TOPBAR) || force) {
         Clear_Topbar();
 
-        Display_Signal();
-        Display_Battery();
-
         Lib_LcdSetFont(LCD_FONT_SMALL);
-
         if (title != NULL) Display_Title(title);
         else Display_Time();
+
+        Display_Battery();
+        Display_Signal();
 
         Lib_SetTimer(TIMER_TOPBAR, TIMER_5SEC);
     }
@@ -301,13 +300,18 @@ void Display_Topbar(int force) {
 
 unsigned char Display_Waiting(int force) {
     sms_t sms;
-    ushort len, pdu_len;
-    int has_message;
+    ushort len, pdu_len, cnt;
     char *msg, *phone;
     unsigned char *rsp, *tmp, *pdu;
+    unsigned char buf[8000];
+    unsigned char notice[8000]; 
     unsigned char ucKey;
+    int iRet;
+    
+    int has_message = FALSE;
 
-	if (!Lib_CheckTimer(TIMER_WAITING) || force) {
+	// if (!Lib_CheckTimer(TIMER_WAITING) || force) {
+	if (force) {
         // draw logo
         Lib_LcdCls();
         Lib_LcdGotoxy(0, 2);
@@ -321,25 +325,49 @@ unsigned char Display_Waiting(int force) {
         // wait for OK, ESC, CANCEL, or MENU
         Lib_KbFlush();
 
-        // start wireless module
         Wls_Init();
-        Wls_SendCmd("AT+CMGF=0\r", rsp, len, 1000);
-        
-        has_message = FALSE;
+        while (TRUE) {
+            memset(buf, 0, sizeof(buf));
+            iRet = Wls_ExecuteCmd("AT+CMGL=4\r", 10, buf, 8000, &len, 3000);
+            if ((iRet == WLS_OK) && strlen(buf)) {
+                // if ((!Wls_ExecuteCmd("AT+CMGL=4\r", 10, rsp, 300, &len, 1000)) && (len > 0)) {
 
-        while (TRUE) {            
-            if (!Wls_SendCmd("AT+CMGL=0\r", rsp, len, 3000)) {
-                has_message = TRUE;
-                tmp = rsp;
-                while (pdu = (strstr(tmp, "\r\n") + 2)) {
-                    pdu_len = pdu - tmp;                    
+                tmp = strstr(buf, "+CMGL:");
+                while (tmp < (buf + len)) {
+                    pdu = strstr(tmp, "\r\n") + 2;
+                    if (!strlen(pdu)) break;
+
+                    tmp = strstr(pdu, "+CMGL:");
+                    pdu_len = (tmp ? tmp : (buf + len)) - pdu;
+
                     if (!sms_decode_pdu(pdu, pdu_len, &sms)) {
-                        strncpy(msg, sms->message, sms->message_length);
-                        strncpy(phone, sms->telnum, sms->telnum_length);
-                        Display_Notice("%s (%s)", msg, phone);
-                    }                    
-                    tmp = pdu;
+                        // strncpy(msg, sms.message, sms.message_length);
+                        // strncpy(phone, sms.telnum, sms.telnum_length);
+
+                    //     notice = "\0";
+                    //     sprintf(notice, "%s: %s", phone, msg);
+                    //     Lib_LcdClrLine(0, 64);
+                    //     Lib_LcdPrintxy(0, 0, 0x00, notice);
+                    //     Lib_DelayMs(2000);
+
+                    //     // sprintf(notice, "Length: %i\nPDU Length: %i\nMessage: %s (%s)", len, pdu_len, msg, phone);
+                    //     // has_message = TRUE;
+                    //     // Display_Notice(notice);
+
+                        sprintf(notice, "%s: %s", sms.telnum, sms.message);
+
+                        Lib_LcdClrLine(0, 64);
+                        Lib_LcdPrintxy(0, 0, 0x00, notice);
+                        Lib_DelayMs(5000);
+                    }
+
+                    tmp = pdu + pdu_len;
                 }
+
+                snprintf(notice, 30, "Response:\n%s", buf);
+                Lib_LcdClrLine(0, 64);
+                Lib_LcdPrintxy(0, 0, 0x00, notice);
+                Lib_DelayMs(5000);
             }
             
             if (Lib_KbCheck()) continue;
@@ -554,7 +582,7 @@ int Display_Notice(char *message) {
     Lib_KbFlush();
     while (TRUE) {
         Display_Topbar(FALSE);
-        if (Display_Waiting(FALSE)) break;
+        // if (Display_Waiting(FALSE)) break;
 
         if (Lib_KbCheck()) continue;
         ucKey = Lib_KbGetCh();
@@ -562,8 +590,9 @@ int Display_Notice(char *message) {
         switch (ucKey) {
             case KEYOK:
             case KEYENTER:
+            case KEYCANCEL:
+            case KEYCLEAR:
                 return;
-
             
             default:
                 continue;
@@ -639,7 +668,10 @@ int main(void) {
     // initialize wireless
     Wls_SelectSim((int)list_env_value[0]);
     Wls_Reset();
-    if (Wls_Init()) return 1;
+    Wls_Init();
+
+    // PDU mode
+    // Wls_SendCmdRequest("AT+CMGF=0\r", 10);
 
     // initialize printer
 	// if (Lib_PrnInit()) return 1;
@@ -971,6 +1003,8 @@ int main(void) {
                             list_env_value[0] = list_value;
                             Lib_FilePutEnv("SIMNO", list_env_value);
                             Wls_SelectSim((int)list_env_value[0]);
+                            Display_Notice("Resetting network\nsettings.");
+                            Wls_Reset();
                             view = VIEW_SETTINGS_NETWORK;
                     }
                     break;

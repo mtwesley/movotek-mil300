@@ -1,8 +1,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <stdint.h>
 #include "sms_pdu.h"
+
+#define bzero(s, n) memset((s), 0, (n))
+#define bcopy(s1, s2, n) memmove((s2), (s1), (n))
 
 static const char *hexchar = "0123456789ABCDEF";
 
@@ -23,7 +25,8 @@ static int decode7(uint8_t *in, size_t in_sz, uint8_t *out, size_t out_sz)
     }
 
     uint8_t prev = 0;
-    for ( int i = 0, j = 0, shift = 8; (i < in_sz) && (j < in_sz); ++i, ++j, --shift ) {
+    int i, j, shift;
+    for ( i = 0, j = 0, shift = 8; (i < in_sz) && (j < in_sz); ++i, ++j, --shift ) {
 
         if ( shift == 1 ) {
             out[j] = (prev >> 1);
@@ -52,8 +55,9 @@ static int encode7(uint8_t *in, size_t in_sz, uint8_t *out, size_t out_sz)
         return -1;
     }
 
+    int i, shift;
     int j = 0;
-    for ( int i = 0, shift = 7; (i < in_sz) && (j < out_sz); ++i, ++j, --shift ) {
+    for ( i = 0, shift = 7; (i < in_sz) && (j < out_sz); ++i, ++j, --shift ) {
 
         uint8_t new = in[i];
         new &= 0x7F;
@@ -79,7 +83,8 @@ static int encode7(uint8_t *in, size_t in_sz, uint8_t *out, size_t out_sz)
 
 static size_t decode_stroctet(const char *octet, size_t octet_sz, uint8_t *data, size_t data_sz)
 {
-    for ( int i = 0, j = 0; (i < octet_sz) && (j < data_sz); i += 2, ++j ) {
+    int i, j;
+    for ( i = 0, j = 0; (i < octet_sz) && (j < data_sz); i += 2, ++j ) {
         uint value;
 
         sscanf(octet + i, "%02X", &value);
@@ -95,7 +100,8 @@ static size_t encode_stroctet(const uint8_t *data, size_t data_sz, char *octet, 
         return 0;
     }
 
-    for ( int i = 0, j = 0; (i < octet_sz) && (j < data_sz); i += 2, ++j ) {
+    int i, j;
+    for ( i = 0, j = 0; (i < octet_sz) && (j < data_sz); i += 2, ++j ) {
         uint8_t d = data[j];
 
         printf("%02X", d);
@@ -117,7 +123,8 @@ static int decode_telnum(const char *num, size_t num_sz, sms_t *sms)
         return -2;
     }
 
-    for ( int i = 0, j = 0; i < num_sz; i += 2 ) {
+    int i, j;
+    for ( i = 0, j = 0; i < num_sz; i += 2 ) {
         char n1 = num[i];
         char n2 = num[i + 1];
 
@@ -139,8 +146,9 @@ static int encode_telnum(const char *num, size_t num_sz, uint8_t *buf, size_t bu
         return -1;
     }
 
+    int i;
     int j = 0;
-    for ( int i = 0; i < num_sz; i += 2, j++ ) {
+    for ( i = 0; i < num_sz; i += 2, j++ ) {
         uint8_t n1 = (num[i] - '0');
         uint8_t n2 = (num[i + 1] - '0');
 
@@ -180,7 +188,7 @@ int sms_decode_pdu(const char *data, size_t sz, sms_t *sms)
     uint32_t num_length;
     sscanf(pdata, "%02X", &num_length);
     pdata += 2;
-    sms->sender_length = num_length;
+    sms->telnum_length = num_length;
     num_length = ((num_length % 2) == 0 ? num_length : num_length + 1);
     /* read type of address of the sender number */
     uint32_t sender_addr_type;
@@ -255,7 +263,7 @@ int sms_encode_pdu(sms_t *sms, char *data, size_t sz)
 
     bzero(data, sz);
 
-    size_t buf_sz = 9 + ((sms->sender_length % 2) == 0 ? sms->sender_length : sms->sender_length + 1) / 2 + ((sms->message_length * 7) / 8 + 1);
+    size_t buf_sz = 9 + ((sms->telnum_length % 2) == 0 ? sms->telnum_length : sms->telnum_length + 1) / 2 + ((sms->message_length * 7) / 8 + 1);
 
     if ( sz < (buf_sz * 2) ) {
         return -1;
@@ -270,9 +278,9 @@ int sms_encode_pdu(sms_t *sms, char *data, size_t sz)
     *(pbuf++) = 0x00; /* Length of SMSC information */
     *(pbuf++) = 0x11; /* First octet of the SMS-SUBMIT message. */
     *(pbuf++) = 0x00; /* TP-Message-Reference. The "00" value here lets the phone set the message reference number itself. */
-    *(pbuf++) = (uint8_t) sms->sender_length;
+    *(pbuf++) = (uint8_t) sms->telnum_length;
     *(pbuf++) = sms->telnum_type;
-    int num_sz = encode_telnum(sms->telnum, sms->sender_length, pbuf, buf_sz - (pbuf - buf));
+    int num_sz = encode_telnum(sms->telnum, sms->telnum_length, pbuf, buf_sz - (pbuf - buf));
     if ( num_sz >= 0 ) {
         pbuf += num_sz;
     }
