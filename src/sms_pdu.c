@@ -18,14 +18,19 @@ static inline char hex2c(uint8_t d)
  */
 static int decode7(uint8_t *in, size_t in_sz, uint8_t *out, size_t out_sz, uint8_t padd)
 {
+    int i = 0, j = 0, shift;
     size_t out_len_max = (in_sz * 8) / 7;
 
     if ( out_len_max > out_sz ) {
         return -1;
     }
 
+    if ( padd ) {
+        out[0] = in[0] >> 1;
+        i++; j++;        
+    }
+    
     uint8_t prev = 0;
-    int i, j, shift;
     for ( i = 0, j = 0, shift = 8; (i < in_sz) && (j < in_sz); ++i, ++j, --shift ) {
 
         if ( shift == 1 ) {
@@ -49,15 +54,19 @@ static int decode7(uint8_t *in, size_t in_sz, uint8_t *out, size_t out_sz, uint8
 
 static int encode7(uint8_t *in, size_t in_sz, uint8_t *out, size_t out_sz, uint8_t padd)
 {
+    int i = 0, j = 0, shift;
     size_t out_len_max = ((in_sz * 7) / 8 + 1);
 
     if ( out_len_max > out_sz ) {
         return -1;
     }
 
-    int i, shift;
-    int j = 0;
-    for ( i = 0, shift = 7; (i < in_sz) && (j < out_sz); ++i, ++j, --shift ) {
+    if ( padd ) {
+        out[0] = in[0] << 1;
+        i++; j++;
+    }
+    
+    for ( shift = 7; (i < in_sz) && (j < out_sz); ++i, ++j, --shift ) {
 
         uint8_t new = in[i];
         new &= 0x7F;
@@ -345,11 +354,14 @@ int sms_encode_pdu(sms_t *sms, char *data, size_t sz)
         // padd = ((0×05 + 1 ) * 8 ) % 7;
         // if ( padd ) user_data_padding = 7 - padd;
         padd = 1; // padding is always one
-    } else padd = 0;
+    } 
+    else {
+        padd = 0;
+    }
     // *(pbuf++) = 0xAA; /* TP-Validity-Period. "AA" means 4 days. */
     int enc7_sz = encode7(sms->message, sms->message_length, pbuf + 1, buf_sz - (pbuf - buf) - 1, padd);
     if ( enc7_sz >= 0 ) {
-        *(pbuf++) = (uint8_t) sms->message_length;
+        *(pbuf++) = (uint8_t) sms->message_type == SMS_MULTIPART ? sms->message_length + 12 : sms->message_length;
         pbuf += enc7_sz;
     }
     else {
