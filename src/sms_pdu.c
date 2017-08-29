@@ -31,7 +31,7 @@ static int decode7(uint8_t *in, size_t in_sz, uint8_t *out, size_t out_sz, uint8
     }
     
     uint8_t prev = 0;
-    for ( i = 0, j = 0, shift = 8; (i < in_sz) && (j < in_sz); ++i, ++j, --shift ) {
+    for ( shift = 8; (i < in_sz) && (j < in_sz); ++i, ++j, --shift ) {
 
         if ( shift == 1 ) {
             out[j] = (prev >> 1);
@@ -234,7 +234,7 @@ int sms_decode_pdu(const char *data, size_t sz, sms_t *sms)
     pdata += 2;
 
     /* read user data header; if present */
-    if (message_type == SMS_MULTIPART) {
+    if (message_type & SMS_MULTIPART) {
         /* read user data header length */
         uint32_t user_data_header_length;
         sscanf(pdata, "%02X", &user_data_header_length);
@@ -273,12 +273,12 @@ int sms_decode_pdu(const char *data, size_t sz, sms_t *sms)
     int decode_success = 0;
     if ( data_coding == 0x00 ) {
         /* decode octet string to binary data */
-        uint8_t decode[SMS_MESSAGE_SIZE];
-        size_t decode_sz = decode_stroctet(pdata, user_data_length * 2, decode, SMS_MESSAGE_SIZE);
+        uint8_t decode[SMS_MESSAGE_BUFFER];
+        size_t decode_sz = decode_stroctet(pdata, user_data_length * 2, decode, SMS_MESSAGE_BUFFER);
 
         if ( decode_sz >= 0 ) {
             /* decode 8 bit to 7 bit */
-            int dec7_res = decode7(decode, user_data_length, sms->message, SMS_MESSAGE_SIZE, user_data_padding);
+            int dec7_res = decode7(decode, user_data_length, sms->message, SMS_MESSAGE_BUFFER, user_data_padding);
 
             if ( dec7_res == 0 ) {
                 /* set data length */
@@ -289,7 +289,7 @@ int sms_decode_pdu(const char *data, size_t sz, sms_t *sms)
     }
     else if ( data_coding == 0x04 ) {
         /* decode octet string to binary data */
-        size_t decode_sz = decode_stroctet(pdata, user_data_length * 2, sms->message, SMS_MESSAGE_SIZE);
+        size_t decode_sz = decode_stroctet(pdata, user_data_length * 2, sms->message, SMS_MESSAGE_BUFFER);
         if ( decode_sz >= 0 ) {
             /* set data length */
             sms->message_length = decode_sz;
@@ -298,7 +298,7 @@ int sms_decode_pdu(const char *data, size_t sz, sms_t *sms)
     }
     else if ( data_coding == 0x08 ) {
         /* decode octet string to binary data */
-        size_t decode_sz = decode_stroctet(pdata, user_data_length * 4, sms->message, SMS_MESSAGE_SIZE);
+        size_t decode_sz = decode_stroctet(pdata, user_data_length * 4, sms->message, SMS_MESSAGE_BUFFER);
         if ( decode_sz >= 0 ) {
             /* set data length */
             sms->message_length = decode_sz;
@@ -331,6 +331,7 @@ int sms_encode_pdu(sms_t *sms, char *data, size_t sz)
         return -1;
     }
 
+    int padd;
     uint8_t *pbuf = buf;
     *(pbuf++) = 0x00; /* Length of SMSC information */
     *(pbuf++) = 0x11; /* First octet of the SMS-SUBMIT message. */
@@ -344,10 +345,10 @@ int sms_encode_pdu(sms_t *sms, char *data, size_t sz)
     *(pbuf++) = 0x00; /* TP-PID. Protocol identifier */
     *(pbuf++) = 0x00; /* TP-DCS. Data coding scheme.This message is coded according to the 7bit default alphabet. */
     *(pbuf++) = 0xA7; /* TP-Validity-Period. "A7" means 24 hours. */
-    if (sms->message_type == SMS_MULTIPART) {
-        *(pbuf++) = 0×05; /* UDHL. User data header length */
-        *(pbuf++) = 0×00; /* IEI. Information element identifier */
-        *(pbuf++) = 0×03; /* IEDL. Information element data length */
+    if (sms->message_type & SMS_MULTIPART) {
+        *(pbuf++) = 0x05; /* UDHL. User data header length */
+        *(pbuf++) = 0x00; /* IEI. Information element identifier */
+        *(pbuf++) = 0x30; /* IEDL. Information element data length */
         *(pbuf++) = sms->message_reference; /* Message reference number */
         *(pbuf++) = sms->message_parts; /* Message total parts */
         *(pbuf++) = sms->message_number; /* Mess part number */
@@ -361,7 +362,7 @@ int sms_encode_pdu(sms_t *sms, char *data, size_t sz)
     // *(pbuf++) = 0xAA; /* TP-Validity-Period. "AA" means 4 days. */
     int enc7_sz = encode7(sms->message, sms->message_length, pbuf + 1, buf_sz - (pbuf - buf) - 1, padd);
     if ( enc7_sz >= 0 ) {
-        *(pbuf++) = (uint8_t) sms->message_type == SMS_MULTIPART ? sms->message_length + 12 : sms->message_length;
+        *(pbuf++) = (uint8_t) (sms->message_type & SMS_MULTIPART) ? sms->message_length + 12 : sms->message_length;
         pbuf += enc7_sz;
     }
     else {

@@ -305,6 +305,7 @@ unsigned char Display_Waiting(int force) {
     unsigned char *rsp, *tmp, *pdu;
     unsigned char buf[8000];
     unsigned char notice[8000]; 
+    unsigned char print_notice[8000]; 
     unsigned char ucKey;
     int iRet;
     
@@ -326,48 +327,80 @@ unsigned char Display_Waiting(int force) {
         Lib_KbFlush();
 
         Wls_Init();
+        Lib_PrnInit();
         while (TRUE) {
             memset(buf, 0, sizeof(buf));
             iRet = Wls_ExecuteCmd("AT+CMGL=4\r", 10, buf, 8000, &len, 3000);
             if ((iRet == WLS_OK) && strlen(buf)) {
                 // if ((!Wls_ExecuteCmd("AT+CMGL=4\r", 10, rsp, 300, &len, 1000)) && (len > 0)) {
 
-                tmp = strstr(buf, "+CMGL:");
-                while (tmp < (buf + len)) {
+                tmp = buf;
+                while (tmp = strstr(tmp, "+CMGL: ")) {
                     pdu = strstr(tmp, "\r\n") + 2;
-                    if (!strlen(pdu)) break;
+                    tmp = strstr(pdu, "\r\n");
+                    pdu_len = tmp - pdu + 1;
 
-                    tmp = strstr(pdu, "+CMGL:");
-                    pdu_len = (tmp ? tmp : (buf + len)) - pdu;
+                    snprintf(print_notice, pdu_len, "%s\n", pdu);
+                    // Lib_PrnStr(print_notice);
+                    // Lib_PrnStr("\n\n");
 
-                    if (!sms_decode_pdu(pdu, pdu_len, &sms)) {
-                        // strncpy(msg, sms.message, sms.message_length);
-                        // strncpy(phone, sms.telnum, sms.telnum_length);
-
-                    //     notice = "\0";
-                    //     sprintf(notice, "%s: %s", phone, msg);
-                    //     Lib_LcdClrLine(0, 64);
-                    //     Lib_LcdPrintxy(0, 0, 0x00, notice);
-                    //     Lib_DelayMs(2000);
-
-                    //     // sprintf(notice, "Length: %i\nPDU Length: %i\nMessage: %s (%s)", len, pdu_len, msg, phone);
-                    //     // has_message = TRUE;
-                    //     // Display_Notice(notice);
-
-                        sprintf(notice, "%s: %s", sms.telnum, sms.message);
-
-                        Lib_LcdClrLine(0, 64);
-                        Lib_LcdPrintxy(0, 0, 0x00, notice);
-                        Lib_DelayMs(5000);
-                    }
-
-                    tmp = pdu + pdu_len;
+                    // if (!sms_decode_pdu(pdu, pdu_len, &sms)) {
+                    sms_decode_pdu(pdu, pdu_len, &sms);
+                        sprintf(notice, "%s (%x, %i, %i, %i, %i): %s", sms.telnum, sms.message_type, sms.message_length,
+                                sms.message_number, sms.message_parts, sms.message_reference, sms.message);                        
+                        
+                        Lib_PrnStr(print_notice);
+                        Lib_PrnStr("\n\n");
+                        
+                        Lib_PrnStr(notice);
+                        Lib_PrnStr("\n\n");
+                    
                 }
 
-                snprintf(notice, 30, "Response:\n%s", buf);
-                Lib_LcdClrLine(0, 64);
-                Lib_LcdPrintxy(0, 0, 0x00, notice);
-                Lib_DelayMs(5000);
+                // tmp = strstr(buf, "+CMGL:");
+                // while (tmp < (buf + len)) {
+                //     pdu = strstr(tmp, "\r\n") + 2;
+                //     if (!strlen(pdu)) break;
+
+                //     tmp = strstr(pdu, "\r");
+                //     // if (!tmp) tmp = strstr(pdu, "\n");
+                //     // if (!tmp) tmp = strstr(pdu, "+CMGL:");
+                //     pdu_len = (tmp ? tmp : (buf + len)) - pdu + 1;
+
+                //     Lib_PrnSetFont(PRN_FONT_LARGE);
+                //     Lib_PrnStr("\n\n");
+
+                //     snprintf(print_notice, pdu_len, "%s", pdu);
+                //     Lib_PrnStr(print_notice);
+
+                //     if (!sms_decode_pdu(pdu, pdu_len, &sms)) {
+                //         sprintf(notice, "%s (%x, %i, %i, %i, %i): %s", sms.telnum, sms.message_type, sms.message_length,
+                //                 sms.message_number, sms.message_parts, sms.message_reference, sms.message);
+                        
+                //         Lib_PrnStr("\n\n");
+                //         Lib_PrnStr(sms.message);
+
+                //         // Lib_LcdClrLine(0, 64);
+                //         // Lib_LcdPrintxy(0, 0, 0x00, notice);
+                //         // Lib_DelayMs(5000);
+                //     }
+
+                //     Lib_PrnStr("\n\n\n\n\n\n\n\n\n\n");
+
+                //     tmp = pdu + pdu_len;
+                    
+                // }
+
+                // snprintf(notice, 30, "Response:\n%s", buf);
+                // Lib_LcdClrLine(0, 64);
+                // Lib_LcdPrintxy(0, 0, 0x00, notice);
+
+                // Lib_PrnStr(buf);
+                Lib_PrnStr("\n\n\n\n\n\n\n\n\n\n");
+
+                Lib_PrnStart();
+                
+                Lib_DelayMs(10000);
             }
             
             if (Lib_KbCheck()) continue;
