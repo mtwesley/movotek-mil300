@@ -1,3 +1,6 @@
+#include "uthash.h"
+#include "utlist.h"
+
 #ifndef SMS_PDU_H
 #define	SMS_PDU_H
 
@@ -33,6 +36,9 @@ typedef struct {
     uint8_t telnum_type;
     char telnum[SMS_SENDER_SIZE];
     size_t telnum_length;
+    sms_t *prev;
+    sms_t *next;
+    UT_hash_handle hh;
 } sms_t;
 
 /*
