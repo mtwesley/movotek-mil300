@@ -268,11 +268,6 @@ int sms_decode_pdu(const char *data, size_t sz, sms_t *sms)
  
         /* re-calculate user data length */
         user_data_length -= 12;
-    } else {
-        sms->message_reference = 0;
-        sms->message_parts = 1;
-        sms->message_number = 1;
-        user_data_padding = 0;
     }
 
     int decode_success = 0;
@@ -381,10 +376,6 @@ int sms_encode_pdu(sms_t *sms, char *data, size_t sz)
     return enc_sz;
 }
 
-int sms_sort(sms_t *a, sms_t *b) {
-    return a.message_number - b.message_number;
-}
-
 ssize_t sms_write(const char *mesg, sms_t *sms)
 {
     if ( !mesg ) {
@@ -402,29 +393,6 @@ ssize_t sms_write(const char *mesg, sms_t *sms)
 
     memcpy(sms->message, mesg, mesg_len);
     sms->message_length = mesg_len;
-
-    return mesg_len;
-}
-
-ssize_t sms_read(char *mesg, sms_t *sms) {
-    if ( !mesg ) {
-        return -1;
-    }
-    if ( !sms ) {
-        return -1;
-    }
-
-    size_t mesg_len = 0;
-
-    sms_t *head = sms;
-    while (head->prev) { head = head->prev; }
-
-    sms_t *tmp = head;
-    do { mesg_len += strlen(tmp.message_length); tmp = tmp->next; } while (tmp);
-            
-    tmp = head;
-    mesg = malloc(mesg_len + 1);
-    do { memcpy(mesg, tmp.message, tmp.message_length); tmp = tmp->next; } while (tmp);
 
     return mesg_len;
 }

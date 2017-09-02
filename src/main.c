@@ -300,7 +300,6 @@ void Display_Topbar(int force) {
 
 unsigned char Display_Waiting(int force) {
     sms_t sms;
-    sms_t *smss = NULL;
     ushort len, pdu_len, cnt;
     char *msg, *phone;
     unsigned char *rsp, *tmp, *pdu;
@@ -312,7 +311,8 @@ unsigned char Display_Waiting(int force) {
     
     int has_message = FALSE;
 
-	if (!Lib_CheckTimer(TIMER_WAITING) || force) {
+	// if (!Lib_CheckTimer(TIMER_WAITING) || force) {
+	if (force) {
         // draw logo
         Lib_LcdCls();
         Lib_LcdGotoxy(0, 2);
@@ -327,10 +327,11 @@ unsigned char Display_Waiting(int force) {
         Lib_KbFlush();
 
         Wls_Init();
-        // Lib_PrnInit();
+        Lib_PrnInit();
         while (TRUE) {
             memset(buf, 0, sizeof(buf));
-            if ((Wls_ExecuteCmd("AT+CMGL=4\r", 10, buf, 8000, &len, 3000) == WLS_OK) && strlen(buf)) {
+            iRet = Wls_ExecuteCmd("AT+CMGL=4\r", 10, buf, 8000, &len, 3000);
+            if ((iRet == WLS_OK) && strlen(buf)) {
                 // if ((!Wls_ExecuteCmd("AT+CMGL=4\r", 10, rsp, 300, &len, 1000)) && (len > 0)) {
 
                 tmp = buf;
@@ -339,35 +340,22 @@ unsigned char Display_Waiting(int force) {
                     tmp = strstr(pdu, "\r\n");
                     pdu_len = tmp - pdu + 1;
 
-                    // snprintf(print_notice, pdu_len, "%s\n", pdu);
+                    snprintf(print_notice, pdu_len, "%s\n", pdu);
                     // Lib_PrnStr(print_notice);
                     // Lib_PrnStr("\n\n");
 
-                    if (!sms_decode_pdu(pdu, pdu_len, &sms)) {
-                        if (HASH_COUNT(smss) == sms.message_parts) continue;
+                    // if (!sms_decode_pdu(pdu, pdu_len, &sms)) {
+                    sms_decode_pdu(pdu, pdu_len, &sms);
+                        sprintf(notice, "%s (%x, %i, %i, %i, %i): %s", sms.telnum, sms.message_type, sms.message_length,
+                                sms.message_number, sms.message_parts, sms.message_reference, sms.message);                        
                         
-                        sms_t *multipart;
-                        HASH_FIND_INT(smss, &sms.message_reference, multipart);
-                        if (multipart) {
-                            DL_INSERT_INORDER(multipart, &sms, sms_sort);
-                        } else
-                            multipart = &sms;
-                            HASH_ADD_INT(smss, message_reference, multipart);
-                        }
-
-                        // sprintf(notice, "%s (%x, %i, %i, %i, %i): %s", sms.telnum, sms.message_type, sms.message_length,
-                        //         sms.message_number, sms.message_parts, sms.message_reference, sms.message);                        
+                        Lib_PrnStr(print_notice);
+                        Lib_PrnStr("\n\n");
                         
-                        // Lib_PrnStr(print_notice);
-                        // Lib_PrnStr("\n\n");
-                        
-                        // Lib_PrnStr(notice);
-                        // Lib_PrnStr("\n\n");
-                    }                    
+                        Lib_PrnStr(notice);
+                        Lib_PrnStr("\n\n");
+                    
                 }
-
-                
-
 
                 // tmp = strstr(buf, "+CMGL:");
                 // while (tmp < (buf + len)) {
@@ -408,11 +396,11 @@ unsigned char Display_Waiting(int force) {
                 // Lib_LcdPrintxy(0, 0, 0x00, notice);
 
                 // Lib_PrnStr(buf);
-                // Lib_PrnStr("\n\n\n\n\n\n\n\n\n\n");
+                Lib_PrnStr("\n\n\n\n\n\n\n\n\n\n");
 
-                // Lib_PrnStart();
+                Lib_PrnStart();
                 
-                // Lib_DelayMs(10000);
+                Lib_DelayMs(10000);
             }
             
             if (Lib_KbCheck()) continue;
