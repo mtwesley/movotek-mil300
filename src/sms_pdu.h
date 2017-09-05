@@ -22,7 +22,7 @@ typedef unsigned long long uint64_t;
 * Please refer to:
 *   http://www.dreamfabric.com/sms/type_of_address.html
 */    
-typedef struct {
+typedef struct sms_t {
     int id;
     uint8_t message_type;
     uint8_t message[SMS_MESSAGE_BUFFER];
