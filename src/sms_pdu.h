@@ -9,8 +9,6 @@
 #define SMS_SINGLE          0x01
 #define SMS_MULTIPART       0x40
 
-#define SMS_MAX_PARTS       15
-
 typedef signed char        int8_t;
 typedef short              int16_t;
 typedef int                int32_t;

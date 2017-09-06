@@ -300,11 +300,9 @@ void Display_Topbar(int force) {
 
 unsigned char Display_Waiting(int force) {
     sms_t sms;
-    char multipart[SMS_MAX_PARTS][SMS_MULTIPART_SIZE];
-    ushort multipart_msg_id[SMS_MAX_PARTS];
-    ushort multipart_ref = 0;
+    char multipart[15][154];
 
-    ushort buf_len, pdu_len, msg_id, msg_status;
+    ushort len, pdu_len, cnt;
     unsigned char *tmp, *pdu;
     unsigned char msg[2000];
     unsigned char buf[8000];
@@ -312,7 +310,6 @@ unsigned char Display_Waiting(int force) {
     unsigned char ucKey;
     
     int has_message = FALSE;
-    int has_multipart = FALSE;
 
 	// if (!Lib_CheckTimer(TIMER_WAITING) || force) {
 	if (force) {
@@ -334,47 +331,41 @@ unsigned char Display_Waiting(int force) {
         while (TRUE) {
             memset(buf, 0, sizeof(buf));
             memset(msg, 0, sizeof(msg));
-            memset(multipart, 0, sizeof(multipart));
-            memset(multipart_msg_id, 0, sizeof(multipart_msg_id));
-            
-            if ((Wls_ExecuteCmd("AT+CMGL=4\r", 10, buf, 8000, &buf_len, 3000) == WLS_OK) && strlen(buf)) {
+
+            if ((Wls_ExecuteCmd("AT+CMGL=4\r", 10, buf, 8000, &len, 3000) == WLS_OK) && strlen(buf)) {
                 tmp = buf;
                 while (tmp = strstr(tmp, "+CMGL: ")) {
-                    sscanf(tmp, "+CMGL: %d,%d,", msg_id, msg_status);
                     pdu = strstr(tmp, "\r\n") + 2;
                     tmp = strstr(pdu, "\r\n");
                     pdu_len = tmp - pdu + 1;
 
                     if (!sms_decode_pdu(pdu, pdu_len, &sms)) {
-                        int ref = sms.message_reference;
-                        int num = sms.message_number;
-                        int parts = sms.message_parts;
+                        if (sms.message_type & SMS_MULTIPART) {
+                            int ref = sms.message_reference;
+                            int num = sms.message_number;
+                            int parts = sms.message_parts;
 
-                        if ((sms.message_type & SMS_MULTIPART) && (!multipart_ref || multipart_ref == ref)) {
-                            has_multipart = TRUE;
-                            multipart_ref = ref;
-                            
-                            multipart_msg_id[num] = msg_id;
                             strcpy(multipart[num], sms.message);
-
-                            int i; 
-                            for (i = 0; i < SMS_MAX_PARTS; i++) {
-                                strcat(msg, multipart[i]);
-
-                                if (!multipart[i]) break;                                
-                                if (i == parts) {
-                                    has_multipart = FALSE;
-                                    multipart_ref = 0;
-                                }
-                            }
-                        } else if (!has_multipart) {
-                            strcpy(msg, sms.message);
+                            sprintf(notice, "%s (%x, %i, %i, %i, %i): %s", sms.telnum, sms.message_type, sms.message_length,
+                                    sms.message_number, sms.message_parts, sms.message_reference, sms.message);
+                            Lib_PrnStr(notice);
+                            Lib_PrnStr("\n\n");
                         }
                     }
                 }
 
+                int i;
+                for (i = 0; i < 15; i++) {
+                    if (multipart[i]) {
+                        strcat(msg, multipart[i]);
+                    }
+                }
+
                 Lib_PrnStr(msg);
-                Lib_PrnStr("\n\n\n\n\n\n\n");
+                Lib_PrnStr("\n\n");
+                
+                Lib_PrnStr(buf);
+                Lib_PrnStr("\n\n\n\n\n\n\n\n\n\n");
                 
                 Lib_PrnStart();
                 Lib_DelayMs(10000);
