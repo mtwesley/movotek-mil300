@@ -267,7 +267,7 @@ int sms_decode_pdu(const char *data, size_t sz, sms_t *sms)
         user_data_padding = 1; // padding is always 1
  
         /* re-calculate user data length */
-        user_data_length -= 12;
+        user_data_length -= 7;
     }
 
     int decode_success = 0;
