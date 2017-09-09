@@ -311,8 +311,6 @@ unsigned char Display_Waiting(int force) {
     unsigned char buf[8000];
     unsigned char notice[2000];
     unsigned char ucKey;
-    
-    int multipart_ref = 0;
 
 	if (!Lib_CheckTimer(TIMER_WAITING) || force) {
         // draw logo
@@ -332,6 +330,7 @@ unsigned char Display_Waiting(int force) {
         Lib_PrnInit();
         while (TRUE) {
             int has_message = FALSE;
+            int multipart_ref = 0;
 
             memset(buf, 0, sizeof(buf));
             memset(msg, 0, sizeof(msg));
@@ -351,7 +350,35 @@ unsigned char Display_Waiting(int force) {
                     pdu_len = tmp - pdu + 1;
 
                     if (!sms_decode_pdu(pdu, pdu_len, &sms)) {
+                        int is_old_message = FALSE;                        
+                        unsigned char datetime[8];
+                        unsigned int new_datetime[8];
+
                         sscanf(rsp + 7, "%D", &msg_id);
+                        Lib_GetDateTime(datetime);
+
+                        for (i = 0; i < 8; i++) new_datetime[i] = bin_ts(datetime[i]);
+
+                        // if (sms.timestamp[0] < new_datetime[0]) old_datetime[0] = TRUE;       // year
+                        // else if (sms.timestamp[1] < new_datetime[1]) old_datetime[1] = TRUE;  // month
+                        // else if (sms.timestamp[2] < new_datetime[2]) old_datetime[2] = TRUE;  // day
+                        // else if ((sms.timestamp[3] < new_datetime[3]) || (sms.timestamp[3] == 23 && new_datetime[3] == 0)) old_datetime[3] = TRUE;  // hour & min
+
+                        // sprintf(notice, "%s (%x, %i, %i, %i, %i, %i, %i:%i, %i:%i, %i:%i, %i:%i, %i:%i, %i:%i, %i:%i): %s", 
+                        //         sms.telnum, sms.message_type, sms.message_length, sms.message_number, sms.message_parts, 
+                        //         sms.message_reference, msg_id, sms.timestamp[0], new_datetime[0], sms.timestamp[1], new_datetime[1], 
+                        //         sms.timestamp[2], new_datetime[2], sms.timestamp[3], new_datetime[3], sms.timestamp[4], new_datetime[4], 
+                        //         sms.timestamp[5], new_datetime[5], datetime_to_epoch(sms.timestamp), datetime_to_epoch(new_datetime), sms.message);
+                        // Lib_PrnStr(notice);
+                        // Lib_PrnStr("\n\n");
+
+                        int diff = datetime_to_epoch(new_datetime) - datetime_to_epoch(sms.timestamp);
+                        if (diff > 3600) {
+                            sprintf(cmd, "AT+CMGD=%d,0\r", msg_id);
+                            Wls_ExecuteCmd(cmd, strlen(cmd), buf, 8000, &len, 1000);
+                            multipart_ref = 0;
+                            continue;
+                        }
 
                         if (sms.message_type & SMS_MULTIPART) {
                             int ref = sms.message_reference;
@@ -364,11 +391,6 @@ unsigned char Display_Waiting(int force) {
                             strncpy(msg_parts[num], sms.message, sms.message_length);
                             msg_ids[num] = msg_id;
 
-                            // sprintf(notice, "%s (%x, %i, %i, %i, %i, %i): %s", sms.telnum, sms.message_type, sms.message_length,
-                            //         sms.message_number, sms.message_parts, sms.message_reference, msg_id, sms.message);
-                            // Lib_PrnStr(notice);
-                            // Lib_PrnStr("\n\n");
-
                             for (i = 0; i < SMS_MULTIPART_MAX; i++) {
                                 j = i + 1;
                                 if (msg_ids[j] == 0) break;
@@ -377,7 +399,7 @@ unsigned char Display_Waiting(int force) {
                                     multipart_ref = 0;
                                 } 
                             }
-                        } 
+                        }
                         else if (multipart_ref == 0) {
                             strncpy(msg_parts[1], sms.message, sms.message_length);
                             msg_ids[1] = msg_id;
@@ -401,9 +423,11 @@ unsigned char Display_Waiting(int force) {
                 if (strlen(msg)) {
                     Lib_PrnStr(msg);
                     Lib_PrnStr("\n\n\n\n\n\n\n\n\n\n\n\n");
-                    Lib_PrnStart();
                 }
+
+                Lib_PrnStart();
             }
+            
             
             if (Lib_KbCheck()) continue;
             ucKey = Lib_KbGetCh();

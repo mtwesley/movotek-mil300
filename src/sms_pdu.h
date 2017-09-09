@@ -9,7 +9,8 @@
 #define SMS_SINGLE          0x01
 #define SMS_MULTIPART       0x40
 
-#define SMS_MULTIPART_MAX   15
+#define SMS_MULTIPART_MAX   60
+#define SMS_MESSAGE_MINUTES 10
 
 typedef signed char        int8_t;
 typedef short              int16_t;
@@ -35,6 +36,7 @@ typedef struct sms_t {
     uint8_t telnum_type;
     char telnum[SMS_SENDER_SIZE];
     size_t telnum_length;
+    unsigned int timestamp[8];
 } sms_t;
 
 /*
