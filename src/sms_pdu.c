@@ -8,6 +8,12 @@
 
 static const char *hexchar = "0123456789ABCDEF";
 
+
+unsigned int swap(unsigned char x)
+{
+	return (x / 16) + ((x % 16) * 10);
+}
+
 static inline char hex2c(uint8_t d)
 {
     return hexchar[d];
@@ -225,8 +231,38 @@ int sms_decode_pdu(const char *data, size_t sz, sms_t *sms)
     pdata += 2;
     
     /* skip timestamp */
-    pdata += 14;
-    
+    unsigned int ts;
+
+    // year
+    sscanf(pdata, "%02X", &ts);
+    sms->timestamp[0] = swap(ts);
+    pdata += 2;
+
+    // month
+    sscanf(pdata, "%02X", &ts);
+	sms->timestamp[1] = swap(ts);
+    pdata += 2;
+
+    // day
+    sscanf(pdata, "%02X", &ts);
+	sms->timestamp[2] = swap(ts);
+    pdata += 2;
+
+    // hour
+    sscanf(pdata, "%02X", &ts);
+	sms->timestamp[3] = swap(ts);
+    pdata += 2;
+
+    // min
+    sscanf(pdata, "%02X", &ts);
+	sms->timestamp[4]  = swap(ts);
+    pdata += 2;
+
+    // sec
+    sscanf(pdata, "%02X", &ts);
+	sms->timestamp[5]  = swap(ts);
+    pdata += 4;
+
     /* read user data length */
     uint32_t user_data_length;
     uint8_t user_data_padding = 0;
