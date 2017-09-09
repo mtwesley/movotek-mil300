@@ -2,6 +2,20 @@
 
 #define NULL 0
 
+char* strrstr(const char *haystack, const char *needle, int length) {
+	char *r = NULL;
+	char *p = NULL;
+	char *o = haystack;
+
+	if (!needle[0]) return (char*)haystack + strlen(haystack);
+	do {
+		p = strstr(haystack, needle);
+		if (!p) return r;
+		r = p;
+		haystack = p + 1;
+	} while (length == NULL || (int)(p - o) < length);
+}
+
 void DispTimer2(void) {
 	int year;
 	unsigned char font,buff[8];
