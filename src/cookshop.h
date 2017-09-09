@@ -15,8 +15,8 @@ typedef struct order_t {
     char type;
     unsigned int number;
     char status;
-    char[500] directions;
     char[500] instructions;
+    char[500] directions;
     char[6] total;
     char[6] paid;
     char[6] due;
@@ -29,5 +29,6 @@ typedef struct order_t {
     char[50] location;
     unsigned long int timestamp;
     order_item_t *items;
+    in items_length;
 } order_t;
 
