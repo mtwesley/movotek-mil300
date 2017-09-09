@@ -2,7 +2,7 @@
 
 #define NULL 0
 
-char* strrstr(const char *haystack, const char *needle, int length) {
+char* strrstr(char *haystack, char *needle, int length) {
 	char *r = NULL;
 	char *p = NULL;
 	char *o = haystack;
@@ -14,6 +14,9 @@ char* strrstr(const char *haystack, const char *needle, int length) {
 		r = p;
 		haystack = p + 1;
 	} while (length == NULL || (int)(p - o) < length);
+	return r;
+}
+
 unsigned int bin_ts(int x) {
 	return (x >> 4) * 10 + (x & 0x0f);
 }
@@ -26,7 +29,7 @@ static unsigned short days[4][12] = {
 };
 
 
-unsigned int datetime_to_epoch(int *datetime) {
+unsigned long int datetime_to_epoch(int *datetime) {
     unsigned int second = datetime[5];  // 0-59
     unsigned int minute = datetime[4];  // 0-59
     unsigned int hour   = datetime[3];  // 0-23
