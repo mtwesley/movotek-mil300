@@ -17,7 +17,7 @@ order_t parse_order() {
 
     while (bencode_dict_has_next(&ben)) {
         long int int_val;
-        const char str_val;
+        const char *str_val;
         int klen, len;
         const char *key;
         bencode_t benk;
@@ -30,7 +30,7 @@ order_t parse_order() {
         }
         else if (!strncmp(key, "type", klen)) {
             bencode_string_value(&benk, &str_val, &len);
-            &order->type = str_val;
+            order->type = str_val[0];
         }
         else if (!strncmp(key, "number", klen)) {
             bencode_int_value(&benk, &int_val);
@@ -38,57 +38,57 @@ order_t parse_order() {
         }
         else if (!strncmp(key, "status", klen)) {
             bencode_string_value(&benk, &str_val, &len);
-            order->status = str_val;
+            order->status = str_val[0];
         }
         else if (!strncmp(key, "instructions", klen)) {
             bencode_string_value(&benk, &str_val, &len);
-            order->instructions = str_val;
+            strncpy(order->instructions, str_val, len);
         }
         else if (!strncmp(key, "directions", klen)) {
             bencode_string_value(&benk, &str_val, &len);
-            order->directions = str_val;
+            strncpy(order->directions, str_val, len);
         }
         else if (!strncmp(key, "total", klen)) {
             bencode_string_value(&benk, &str_val, &len);
-            order->total = str_val;
+            strncpy(order->total, str_val, len);
         }
         else if (!strncmp(key, "paid", klen)) {
             bencode_string_value(&benk, &str_val, &len);
-            order->paid = str_val;
+            strncpy(order->paid, str_val, len);
         }
         else if (!strncmp(key, "due", klen)) {
             bencode_string_value(&benk, &str_val, &len);
-            order->due = str_val;
+            strncpy(order->due, str_val, len);
         }
         else if (!strncmp(key, "cash_due", klen)) {
             bencode_string_value(&benk, &str_val, &len);
-            order->cash_due = str_val;
+            strncpy(order->cash_due, str_val, len);
         }
         else if (!strncmp(key, "owed", klen)) {
             bencode_string_value(&benk, &str_val, &len);
-            order->owed = str_val;
+            strncpy(order->owed, str_val, len);
         }
         else if (!strncmp(key, "extra", klen)) {
             bencode_string_value(&benk, &str_val, &len);
-            order->extra = str_val;
+            strncpy(order->extra, str_val, len);
         }
         else if (!strncmp(key, "fee", klen)) {
             bencode_string_value(&benk, &str_val, &len);
-            order->fee = str_val;
+            strncpy(order->fee, str_val, len);
         }
         else if (!strncmp(key, "discount", klen)) {
             bencode_string_value(&benk, &str_val, &len);
-            order->discount = str_val;
+            strncpy(order->discount, str_val, len);
         }
         else if (!strncmp(key, "currency", klen)) {
             bencode_string_value(&benk, &str_val, &len);
-            order->currency = str_val;
+            strncpy(order->currency, str_val, len);
         }
         else if (!strncmp(key, "location", klen)) {
             if (bencode_is_dict(&benk)) {
                 while (bencode_dict_has_next(&benk)) {
                     long int int_val2;
-                    const char str_val2;
+                    const char *str_val2;
                     int klen2, len2;
                     const char *key2;
                     bencode_t benk2;
@@ -97,7 +97,7 @@ order_t parse_order() {
 
                     if (!strncmp(key2, "name", klen2)) {
                         bencode_string_value(&benk2, &str_val2, &len2);
-                        order->location = str_val2;
+                        strncpy(order->location, str_val2, len2);
                     }
                 }
             }
@@ -120,7 +120,7 @@ order_t parse_order() {
 
                         while (bencode_dict_has_next(&beni)) {
                             long int int_val3;
-                            const char str_val3;
+                            const char *str_val3;
                             int klen3, len3;
                             const char *key3;
                             bencode_t benik;
@@ -134,11 +134,11 @@ order_t parse_order() {
                             }
                             else if (!strncmp(key3, "name", klen3)) {
                                 bencode_string_value(&benik, &str_val3, &len3);
-                                order_item->name = str_val3;
+                                strncpy(order_item->name, str_val3, len3);
                             }
                             else if (!strncmp(key3, "code", klen3)) {
                                 bencode_string_value(&benik, &str_val3, &len3);
-                                order_item->code = str_val3;
+                                strncpy(order_item->code, str_val3, len3);
                             }
                             else if (!strncmp(key3, "restaurant", klen3)) {
                                 if (bencode_is_dict(&benik)) {
@@ -151,7 +151,7 @@ order_t parse_order() {
                     
                                         if (!strncmp(key3, "name", klen3)) {
                                             bencode_string_value(&benk3, &str_val3, &len3);
-                                            order_item->restaurant = str_val3;
+                                            strncpy(order_item->restaurant, str_val3, len3);
                                         }
                                     }
                                 }
@@ -162,15 +162,15 @@ order_t parse_order() {
                             }
                             else if (!strncmp(key3, "price", klen3)) {
                                 bencode_string_value(&benik, &str_val3, &len3);
-                                order_item->price = str_val3;
+                                strncpy(order_item->price, str_val3, len3);
                             }
                             else if (!strncmp(key3, "margin", klen3)) {
                                 bencode_string_value(&benik, &str_val3, &len3);
-                                order_item->margin = str_val3;
+                                strncpy(order_item->margin, str_val3, len3);
                             }
                             else if (!strncmp(key3, "currency", klen3)) {
                                 bencode_string_value(&benik, &str_val3, &len3);
-                                order_item->currency = str_val3;
+                                strncpy(order_item->currency, str_val3, len3);
                             }
                         }
                     }
