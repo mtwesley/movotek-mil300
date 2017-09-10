@@ -9,6 +9,8 @@
 #include "icons.h"
 #include "topbar.h"
 #include "sms_pdu.h"
+#include "cookshop.h"
+#include "bencode.h"
 
 #define VIEW_WAITING      0
 #define VIEW_MAIN         1
@@ -770,6 +772,54 @@ int main(void) {
     // Lib_Beef(6, 150);
     // Lib_Beef(3, 250);
     
+    // order_t order;
+    // order.bencode = "d8:cash_due4:2.008:currency3:USD10:directions7:ghghghf8:discounti0e3:due4:0.005:extrai0e3:fee1:02:idi25494e12:instructions0:5:itemsld4:code0:8:currency3:USD2:idi858e6:margin4:0.004:name19:Small Water (500ml)5:price4:2.008:quantityi1e10:restaurantd4:code3:DRK2:idi16e4:name6:Drinkse13:restaurant_idi16eee8:locationd4:code3:MPT2:idi1e4:name11:Mamba Pointe11:location_idi1e6:numberi125494e4:owed4:0.004:paid4:2.006:status1:P9:timestampi1503243805e5:total4:2.004:type1:D4:userd5:email27:mlentoo.wesley@cookshop.biz2:idi4e4:name15:Mlen-Too Wesley5:phone10:0776034108e7:user_idi4ee";
+
+    // order_parse(&order);
+
+    // char test[300];
+    // Lib_PrnInit();
+
+    // char instructions[500];
+    // char directions[500];
+    // char location[50];
+
+    // memset(instructions, 0, sizeof(instructions));
+    // memset(directions, 0, sizeof(directions));
+    // memset(location, 0, sizeof(location));
+
+    // order_get_instructions(&order, instructions);
+    // order_get_directions(&order, directions);
+    // order_get_location(&order, location);
+
+    // memset(test, 0, sizeof(test));
+
+    // sprintf(test, "Cookshop Order CS%i\n\nType: %c\nStatus: %c\nTimestamp: %i\n\nInstructions: %s\n\nDirections: %s\n\nLocation: %s\n\nNumber of items: %i", 
+    //         order.number, order.type, order.status, order.timestamp, instructions, directions, location, order.items_length);
+    // Lib_PrnStr(test);
+
+    // unsigned long int item_id;
+    // char item_name[100];
+    // char item_code[50];
+    // char item_price[7];
+    // char item_quantity[7];
+  
+    // memset(item_name, 0, sizeof(item_name));
+    // memset(item_code, 0, sizeof(item_code));
+    // memset(item_price, 0, sizeof(item_price));
+    // memset(item_quantity, 0, sizeof(item_quantity));
+
+    // order_get_item(&order, 0, &item_id, &item_name, &item_code);
+    // order_get_item_price(&order, 0, &item_id, &item_price);
+    // order_get_item_quantity(&order, 0, &item_id, &item_quantity);
+
+    // sprintf(test, "\n\n\n\nID: %i\n\nName: %s", item_id, item_name);
+    // Lib_PrnStr(test);
+
+    // Lib_PrnStr("\n\n\n\n\n\n\n\n\n\n\n\n\n");
+
+    // Lib_PrnStart();
+
 	while (TRUE) {
         Lib_LcdCls();
         Lib_LcdClrDotBuf();
