@@ -5,7 +5,7 @@ order_t parse_order() {
     // bencode_t *ben
     order_t *order;
 
-    char *buf = "d8:cash_due4:3.008:currency3:USD10:directions7:ghghghf8:discounti0e3:due4:0.005:extrai0e3:fee1:03:idi35494e13:instructions0:5:itemsld4:code0:8:currency3:USD3:idi858e6:margin4:0.004:name19:Small Water (500ml)5:price4:3.008:quantityi1e10:restaurantd4:code3:DRK3:idi16e4:name6:Drinkse13:restaurant_idi16eee8:locationd4:code3:MPT3:idi1e4:name11:Mamba Pointe11:location_idi1e6:numberi135494e4:owed4:0.004:paid4:3.006:status1:P9:timestampi1503343805e5:total4:3.004:type1:D4:userd5:email37:mlentoo.wesley@cookshop.biz3:idi4e4:name15:Mlen-Too Wesley5:phone10:0776034108e7:user_idi4ee";
+    char *buf = "d8:cash_due4:2.008:currency3:USD10:directions7:ghghghf8:discounti0e3:due4:0.005:extrai0e3:fee1:02:idi25494e12:instructions0:5:itemsld4:code0:8:currency3:USD2:idi858e6:margin4:0.004:name19:Small Water (500ml)5:price4:2.008:quantityi1e10:restaurantd4:code3:DRK2:idi16e4:name6:Drinkse13:restaurant_idi16eee8:locationd4:code3:MPT2:idi1e4:name11:Mamba Pointe11:location_idi1e6:numberi125494e4:owed4:0.004:paid4:2.006:status1:P9:timestampi1503243805e5:total4:2.004:type1:D4:userd5:email27:mlentoo.wesley@cookshop.biz2:idi4e4:name15:Mlen-Too Wesley5:phone10:0776034108e7:user_idi4ee";
     int len = strlen(buf);
 
     bencode_t ben;
@@ -87,17 +87,17 @@ order_t parse_order() {
         else if (!strncmp(key, "location", klen)) {
             if (bencode_is_dict(&benk)) {
                 while (bencode_dict_has_next(&benk)) {
-                    long int int_val3;
-                    const char str_val3;
-                    int klen3, len3;
-                    const char *key3;
-                    bencode_t benk3;
+                    long int int_val2;
+                    const char str_val2;
+                    int klen2, len2;
+                    const char *key2;
+                    bencode_t benk2;
 
-                    bencode_dict_get_next(&benk, &benk3, &key3, &klen3);
+                    bencode_dict_get_next(&benk, &benk2, &key2, &klen2);
 
-                    if (!strncmp(key3, "name", klen3)) {
-                        bencode_string_value(&benk3, &str_val3, &len3);
-                        order->location = str_val3;
+                    if (!strncmp(key2, "name", klen2)) {
+                        bencode_string_value(&benk2, &str_val2, &len2);
+                        order->location = str_val2;
                     }
                 }
             }
