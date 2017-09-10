@@ -1,13 +1,15 @@
+#ifndef COOKSHOP_H
+#define	COOKSHOP_H
 
 typedef struct order_item_t {
     unsigned int id;
-    char[100] name;
-    char[50] code;
-    char[50] restaurant;
+    char name[100];
+    char code[50];
+    char restaurant[50];
     unsigned int quantity;
-    char[6] price;
-    char[6] margin;
-    char[3] currency;
+    char price[6];
+    char margin[6];
+    char currency[3];
 } order_item_t;
 
 typedef struct order_t {
@@ -15,20 +17,21 @@ typedef struct order_t {
     char type;
     unsigned int number;
     char status;
-    char[500] instructions;
-    char[500] directions;
-    char[6] total;
-    char[6] paid;
-    char[6] due;
-    char[6] cash_due;
-    char[6] owed;
-    char[6] extra;
-    char[6] fee;
-    char[6] discount;
-    char[3] currency;
-    char[50] location;
+    char instructions[500];
+    char directions[500];
+    char total[6];
+    char paid[6];
+    char due[6];
+    char cash_due[6];
+    char owed[6];
+    char extra[6];
+    char fee[6];
+    char discount[6];
+    char currency[3];
+    char location[50];
     unsigned long int timestamp;
     order_item_t *items;
-    in items_length;
+    int items_length;
 } order_t;
 
+#endif

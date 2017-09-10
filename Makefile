@@ -48,7 +48,7 @@ $(LOCOBJ)\bencode.o: $(LOCSRC)\bencode.c
         $(GCC) $(LOCSRC)\bencode.c -o $(LOCOBJ)\bencode.o
 
 $(LOCOBJ)\cookshop.o: $(LOCSRC)\cookshop.c
-        $(GCC) $(LOCSRC)\bencode.c -o $(LOCOBJ)\cookshop.o
+        $(GCC) $(LOCSRC)\cookshop.c -o $(LOCOBJ)\cookshop.o
 
 clean:
         del $(LOCOBJ)\*.o
