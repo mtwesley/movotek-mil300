@@ -113,13 +113,20 @@ void order_parse(order_t *order) {
 
     if (!bencode_is_dict(&ben)) return;
 
-    while (bencode_dict_has_next(&ben)) {
-        long int int_val;
-        const char *str_val;
-        int klen, len;
-        const char *key;
-        bencode_t benk;
+    long int int_val;
+    const char *str_val;
+    int klen, len;
+    const char *key;
+    bencode_t benk;
 
+    while (bencode_dict_has_next(&ben) && bencode_dict_get_next(&ben, &benk, &key, &klen)) {
+        if (!strncmp(key, "orders", klen)) {
+            ben = benk;
+            break;
+        }
+    }
+        
+    while (bencode_dict_has_next(&ben)) {
         bencode_dict_get_next(&ben, &benk, &key, &klen);
 
         if (!strncmp(key, "id", klen)) {

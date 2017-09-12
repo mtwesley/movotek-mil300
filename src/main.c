@@ -321,6 +321,7 @@ unsigned char Display_Waiting(int force) {
         Wls_Init();
         Lib_PrnInit();
         while (TRUE) {
+            order_t order;
             char msg[1000];
             int msg_len;
 
@@ -328,8 +329,18 @@ unsigned char Display_Waiting(int force) {
             sms_get_msg(&msg, &msg_len, 1000);
 
             if (strlen(msg)) {
+                int fhandle;
+                char fname[16];
+                memset(fname, 0, sizeof(fname));
+
+                order.bencode = msg;
+                order_parse(order);
+
+                sprintf(fname, "Orders_%s", order.status);
+                fhandle = Lib_FileOpen(fname, O_CREATE);
+
                 Lib_PrnInit();
-                Lib_PrnStr(msg);
+                Lib_PrnStr(order.id);
                 Lib_PrnStr("\n\n\n\n\n\n\n\n\n\n\n\n\n");
                 Lib_PrnStart();
             }
