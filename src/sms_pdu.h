@@ -9,7 +9,7 @@
 #define SMS_SINGLE          0x01
 #define SMS_MULTIPART       0x40
 
-#define SMS_MULTIPART_MAX   60
+#define SMS_MULTIPART_MAX   15
 #define SMS_MESSAGE_MINUTES 10
 
 typedef signed char        int8_t;
@@ -27,8 +27,8 @@ typedef unsigned long long uint64_t;
 */    
 typedef struct sms_t {
     int id;
-    uint8_t message_type;
-    uint8_t message[SMS_MESSAGE_BUFFER];
+    unsigned char message_type;
+    unsigned char message[SMS_MESSAGE_BUFFER];
     size_t message_length;
     uint8_t message_reference;
     uint8_t message_parts;

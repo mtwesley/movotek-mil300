@@ -412,23 +412,23 @@ int sms_encode_pdu(sms_t *sms, char *data, size_t sz)
     return enc_sz;
 }
 
-ssize_t sms_write(const char *mesg, sms_t *sms)
-{
-    if ( !mesg ) {
-        return -1;
-    }
-    if ( !sms ) {
-        return -1;
-    }
+// ssize_t sms_write(const char *mesg, sms_t *sms)
+// {
+//     if ( !mesg ) {
+//         return -1;
+//     }
+//     if ( !sms ) {
+//         return -1;
+//     }
 
-    size_t mesg_len = strlen(mesg);
+//     size_t mesg_len = strlen(mesg);
 
-    if ( mesg_len > SMS_MESSAGE_SIZE ) {
-        mesg_len = SMS_MESSAGE_SIZE;
-    }
+//     if ( mesg_len > SMS_MESSAGE_SIZE ) {
+//         mesg_len = SMS_MESSAGE_SIZE;
+//     }
 
-    memcpy(sms->message, mesg, mesg_len);
-    sms->message_length = mesg_len;
+//     memcpy(sms->message, mesg, mesg_len);
+//     sms->message_length = mesg_len;
 
-    return mesg_len;
-}
+//     return mesg_len;
+// }

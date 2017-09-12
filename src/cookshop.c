@@ -1,5 +1,111 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include <ctype.h>
+
+#include "public.h"
 #include "cookshop.h"
 #include "bencode.h"
+#include "sms_pdu.h"
+
+int sms_get_msg(char *msg, int *msg_len, int max_len) {
+    int i, j;
+    sms_t sms;
+
+    char msg_parts[SMS_MULTIPART_MAX][SMS_MULTIPART_SIZE];
+    ushort msg_ids[SMS_MULTIPART_MAX];
+
+    ushort len, pdu_len, msg_id;
+    unsigned char *rsp, *tmp, *pdu;
+    unsigned char cmd[20];
+    unsigned char buf[4000];
+    unsigned char notice[1000];
+
+    int has_message = FALSE;
+    int multipart_ref = 0;
+
+    memset(buf, 0, sizeof(buf));
+    memset(msg, 0, sizeof(msg));
+
+    for (i = 0; i < SMS_MULTIPART_MAX; i++) {
+        j = i + 1;
+        memset(msg_parts[j], 0, sizeof(msg_parts[j]));
+        msg_ids[j] = 0;
+    }
+
+    strcpy(cmd, "AT+CMGL=4\r");
+    if ((Wls_ExecuteCmd(cmd, strlen(cmd), buf, 8000, &len, 2000) == WLS_OK) && strlen(buf)) {
+        tmp = buf;
+        while (rsp = strstr(tmp, "+CMGL: ")) {
+            pdu = strstr(rsp, "\r\n") + 2;
+            tmp = strstr(pdu, "\r\n");
+            pdu_len = tmp - pdu + 1;
+
+            if (!sms_decode_pdu(pdu, pdu_len, &sms)) {
+                int is_old_message = FALSE;                        
+                unsigned char datetime[8];
+                unsigned int new_datetime[8];
+
+                sscanf(rsp + 7, "%D", &msg_id);
+                Lib_GetDateTime(datetime);
+
+                for (i = 0; i < 8; i++) new_datetime[i] = bin_ts(datetime[i]);
+
+                int diff = datetime_to_epoch(new_datetime) - datetime_to_epoch(sms.timestamp);
+                if (diff > 3600) {
+                    sprintf(cmd, "AT+CMGD=%d,0\r", msg_id);
+                    Wls_ExecuteCmd(cmd, strlen(cmd), buf, 8000, &len, 1000);
+                    multipart_ref = 0;
+                    continue;
+                }
+
+                if (sms.message_type & SMS_MULTIPART) {
+                    int ref = sms.message_reference;
+                    int num = sms.message_number;
+                    int parts = sms.message_parts;
+
+                    if (multipart_ref == 0) multipart_ref = ref;
+                    else if (multipart_ref != ref) continue;
+
+                    strncpy(msg_parts[num], sms.message, sms.message_length);
+                    msg_ids[num] = msg_id;
+
+                    for (i = 0; i < SMS_MULTIPART_MAX; i++) {
+                        j = i + 1;
+                        if (msg_ids[j] == 0) break;
+                        else if (j == parts) {
+                            has_message = TRUE;
+                            multipart_ref = 0;
+                        } 
+                    }
+                }
+                else if (multipart_ref == 0) {
+                    strncpy(msg_parts[1], sms.message, sms.message_length);
+                    msg_ids[1] = msg_id;
+                    has_message = TRUE;
+                }
+            }
+            if (has_message) break;
+        }
+
+        if (has_message) {
+            for (i = 0; i < SMS_MULTIPART_MAX; i++) {
+                j = i + 1;
+                if (msg_ids[j] != 0) {
+                    sprintf(cmd, "AT+CMGD=%d,0\r", msg_ids[j]);
+                    Wls_ExecuteCmd(cmd, strlen(cmd), buf, 8000, &len, 1000);
+                }
+                if (strlen(msg_parts[j]) && (strlen(msg_parts[j]) + strlen(msg) < max_len)) {
+                    strcat(msg, msg_parts[j]);
+                }
+            }
+        }
+
+        *msg_len = strlen(msg);
+    }
+    return 0;
+}
 
 void order_parse(order_t *order) {    
     bencode_t ben;
