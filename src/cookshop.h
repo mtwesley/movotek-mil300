@@ -1,6 +1,8 @@
 #ifndef COOKSHOP_H
 #define	COOKSHOP_H
 
+char *test_bencode = "d6:ordersld8:cash_due4:2.008:currency3:USD10:directions7:ghghghf8:discounti0e3:due4:0.005:extrai0e3:fee1:02:idi25494e12:instructions0:5:itemsld4:code0:8:currency3:USD2:idi858e6:margin4:0.004:name19:Small Water (500ml)5:price4:2.008:quantityi1e10:restaurantd4:code3:DRK2:idi16e4:name6:Drinkse13:restaurant_idi16eee8:locationd4:code3:MPT2:idi1e4:name11:Mamba Pointe11:location_idi1e6:numberi125494e4:owed4:0.004:paid4:2.006:status1:P9:timestampi1503243805e5:total4:2.004:type1:D4:userd5:email27:mlentoo.wesley@cookshop.biz2:idi4e4:name15:Mlen-Too Wesley5:phone10:0776034108e7:user_idi4eeee";
+
 typedef struct order_t {
     unsigned long int id;
     char type;
