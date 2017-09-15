@@ -9,7 +9,7 @@
 #define SMS_SINGLE          0x01
 #define SMS_MULTIPART       0x40
 
-#define SMS_MULTIPART_MAX   15
+#define SMS_MULTIPART_MAX   30
 #define SMS_MESSAGE_MINUTES 10
 
 typedef signed char        int8_t;

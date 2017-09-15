@@ -39,6 +39,9 @@ unsigned long int datetime_to_epoch(int *datetime) {
     return (((year/4*(365*4+1)+days[year%4][month]+day)*24+hour)*60+minute)*60+second;
 }
 
+int center_padding(int width, int str_len) {
+	return width / 2 + (str_len) / 2;
+}
 
 void epoch_to_date_time(int *date_time, unsigned int epoch)
 {

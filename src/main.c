@@ -321,29 +321,37 @@ unsigned char Display_Waiting(int force) {
         Wls_Init();
         Lib_PrnInit();
         while (TRUE) {
-            order_t order;
-            char msg[1000];
+            char msg[2000];
             int msg_len;
 
             memset(msg, 0, sizeof(msg));
-            sms_get_msg(&msg, &msg_len, 1000);
+            sms_get_msg(&msg, &msg_len, 2000);
 
             if (strlen(msg)) {
-                int fhandle;
-                char fname[16];
-                memset(fname, 0, sizeof(fname));
-
+                order_t order;
                 order.bencode = msg;
-                order_parse(order);
 
-                sprintf(fname, "Orders_%s", order.status);
-                fhandle = Lib_FileOpen(fname, O_CREATE);
+                // memset(order.bencode, 0, sizeof(order.bencode));
+                // strcpy(order.bencode, msg);
+                
+                if (order_parse(&order)) {
+                    Print_Order(&order);
+                    // int fhandle;
+                    // char fname[16];
+                    // memset(fname, 0, sizeof(fname));
+                    // sprintf(fname, "Orders_%s", order.status);
+                    // fhandle = Lib_FileOpen(fname, O_CREATE);
 
-                Lib_PrnInit();
-                Lib_PrnStr(order.id);
-                Lib_PrnStr("\n\n\n\n\n\n\n\n\n\n\n\n\n");
-                Lib_PrnStart();
+                    // char notice[100];
+                    // memset(notice, 0, sizeof(notice));
+                    // sprintf(notice, "Order CS%i\n\n\n\n\n\n\n\n\n\n", order.number);
+
+                    // Lib_PrnStr(notice);
+                    // Lib_PrnStr("\n\n\n\n\n\n\n\n\n\n\n");
+                    // Lib_PrnStr(msg);
+                }
             }
+            Lib_PrnStart();
             
             if (Lib_KbCheck()) continue;
             ucKey = Lib_KbGetCh();
@@ -575,33 +583,68 @@ int Display_Notice(char *message) {
     }
 }
 
-void Print_Order(char *order) {
+int Print_Order(order_t *order) {
+    char text_short[51];
+    char text_medium[101];
+    char text_long[501];
+    char large_line[33]; // large line holds 32 characters
+    char small_line[49]; // small line holds 48 characters
+
 	Lib_PrnInit();
 
-    Lib_PrnStr("\n\n");
+    Lib_PrnStr("\n\n"); // give some space
     Lib_PrnLogo(g_Display_logo_384);
 
     Lib_PrnSetFont(PRN_FONT_LARGE);
 
+    // number
+    memset(large_line, 0, sizeof(large_line));
+    sprintf(large_line, "         Order: CS%i\n", order->number);
+    Lib_PrnStr(large_line);
+
+    // type
+    memset(large_line, 0, sizeof(large_line));
+    if (order->type == 'P') Lib_PrnStr("          Type: Pickup\n");
+    else if (order->type == 'D') Lib_PrnStr("         Type: Delivery\n");
+
+    // location
+    memset(large_line, 0, sizeof(large_line));
+    memset(text_short, 0, sizeof(text_short));
+    memset(text_medium, 0, sizeof(text_medium));
+    if (order_get_location(order, text_short)) {
+        sprintf(text_medium, "Location: %s", text_short);
+        sprintf(large_line, "%*s\n", center_padding(32, strlen(text_medium)), text_medium);
+        Lib_PrnStr(large_line);
+    }
+
     Lib_PrnStr("\n\n");
-    Lib_PrnStr("ABCDEFGHIJKLMNOPQRSTUVWXYZ\n");
-    Lib_PrnStr("abcdefghijklmnopqrstuvwxyz\n");
-    Lib_PrnStr("1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890\n");
-    Lib_PrnStr("\n\n");
+    memset(large_line, 0, sizeof(large_line));
+    sprintf(large_line, "Number of items: %i\n\n\n", order->items_length);
 
-    Lib_PrnSetFont(PRN_FONT_MEDIUM);
+    // Lib_PrnStr("ABCDEFGHIJKLMNOPQRSTUVWXYZ\n");
+    // Lib_PrnStr("abcdefghijklmnopqrstuvwxyz\n");
+    // // Lib_PrnStr("1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890\n");
+    // Lib_PrnStr("\n\n");
 
-    Lib_PrnStr("\n\n");
-    Lib_PrnStr("ABCDEFGHIJKLMNOPQRSTUVWXYZ\n");
-    Lib_PrnStr("abcdefghijklmnopqrstuvwxyz\n");
-    Lib_PrnStr("1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890\n");
+    // Lib_PrnSetFont(PRN_FONT_MEDIUM);
 
-    Lib_PrnSetFont(PRN_FONT_LARGE);
+    // Lib_PrnStr("\n\n");
+    // Lib_PrnStr("ABCDEFGHIJKLMNOPQRSTUVWXYZ\n");
+    // Lib_PrnStr("abcdefghijklmnopqrstuvwxyz\n");
+    // // Lib_PrnStr("1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890\n");
 
-    Lib_PrnStr("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+    // Lib_PrnSetFont(PRN_FONT_LARGE);
+
+
+
+    Lib_PrnStr("\n\n\n\n");
+    Lib_PrnStr("////////////////////////////////");
+    Lib_PrnStr("\n\n\n\n\n\n\n\n\n\n");
 
 	// start printing
     Lib_PrnStart();
+
+    return 0;
 }
 
 int main(void) {
@@ -823,7 +866,8 @@ int main(void) {
                         break;
 
                     case KEY5:
-                        Print_Order("CS146001"); break;
+                        // Print_Order("CS146001"); 
+                        break;
 
                     case KEYCANCEL:
                     case KEYBACKSPACE:
@@ -852,7 +896,7 @@ int main(void) {
                         break;
 
                     case KEY4:
-                        Print_Order("CS146001");
+                        // Print_Order("CS146001");
                         break;
                         
                     case KEYCANCEL:
@@ -870,7 +914,8 @@ int main(void) {
                         break;
 
                     case KEY2:
-                        Print_Order("CS146001"); break;
+                        // Print_Order("CS146001"); 
+                        break;
                         
                     case KEYCANCEL:
                     case KEYBACKSPACE:

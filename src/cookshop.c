@@ -19,14 +19,10 @@ int sms_get_msg(char *msg, int *msg_len, int max_len) {
     ushort len, pdu_len, msg_id;
     unsigned char *rsp, *tmp, *pdu;
     unsigned char cmd[20];
-    unsigned char buf[4000];
-    unsigned char notice[1000];
+    unsigned char buf[8000];
 
     int has_message = FALSE;
     int multipart_ref = 0;
-
-    memset(buf, 0, sizeof(buf));
-    memset(msg, 0, sizeof(msg));
 
     for (i = 0; i < SMS_MULTIPART_MAX; i++) {
         j = i + 1;
@@ -34,8 +30,9 @@ int sms_get_msg(char *msg, int *msg_len, int max_len) {
         msg_ids[j] = 0;
     }
 
+    memset(buf, 0, 8000);
     strcpy(cmd, "AT+CMGL=4\r");
-    if ((Wls_ExecuteCmd(cmd, strlen(cmd), buf, 8000, &len, 2000) == WLS_OK) && strlen(buf)) {
+    if ((Wls_ExecuteCmd(cmd, strlen(cmd), buf, 8000, &len, 3000) == WLS_OK) && strlen(buf)) {
         tmp = buf;
         while (rsp = strstr(tmp, "+CMGL: ")) {
             pdu = strstr(rsp, "\r\n") + 2;
@@ -96,9 +93,7 @@ int sms_get_msg(char *msg, int *msg_len, int max_len) {
                     sprintf(cmd, "AT+CMGD=%d,0\r", msg_ids[j]);
                     Wls_ExecuteCmd(cmd, strlen(cmd), buf, 8000, &len, 1000);
                 }
-                if (strlen(msg_parts[j]) && (strlen(msg_parts[j]) + strlen(msg) < max_len)) {
-                    strcat(msg, msg_parts[j]);
-                }
+                if (strlen(msg_parts[j])) strncat(msg, msg_parts[j], max_len);
             }
         }
 
@@ -107,59 +102,129 @@ int sms_get_msg(char *msg, int *msg_len, int max_len) {
     return 0;
 }
 
-void order_parse(order_t *order) {    
-    bencode_t ben;
+int order_parse(order_t *order) {
+    int klen0;
+    const char *key0;
+    bencode_t ben, benk;
+
     bencode_init(&ben, order->bencode, strlen(order->bencode));
 
-    if (!bencode_is_dict(&ben)) return;
+    if (!bencode_is_dict(&ben)) return 0;
+    while (bencode_dict_has_next(&ben) && bencode_dict_get_next(&ben, &benk, &key0, &klen0)) {
+        if (!strncmp(key0, "orders", klen0) && bencode_is_list(&benk) && bencode_list_has_next(&benk)) {                    
+            bencode_list_get_next(&benk, &ben);
 
-    long int int_val;
-    const char *str_val;
-    int klen, len;
-    const char *key;
-    bencode_t benk;
+            if (!bencode_is_dict(&ben)) continue;
+            while (bencode_dict_has_next(&ben)) {
+                long int int_val;
+                const char *str_val;
+                int klen, len;
+                const char *key;
+                bencode_t benk;
 
-    while (bencode_dict_has_next(&ben) && bencode_dict_get_next(&ben, &benk, &key, &klen)) {
-        if (!strncmp(key, "orders", klen)) {
-            ben = benk;
-            break;
+                bencode_dict_get_next(&ben, &benk, &key, &klen);
+
+                if (!strncmp(key, "id", klen)) {
+                    bencode_int_value(&benk, &int_val);
+                    order->id = int_val;
+                }
+                else if (!strncmp(key, "type", klen)) {
+                    bencode_string_value(&benk, &str_val, &len);
+                    order->type = str_val[0];
+                }
+                else if (!strncmp(key, "number", klen)) {
+                    bencode_int_value(&benk, &int_val);
+                    order->number = int_val;            
+                }
+                else if (!strncmp(key, "status", klen)) {
+                    bencode_string_value(&benk, &str_val, &len);
+                    order->status = str_val[0];
+                }
+                else if (!strncmp(key, "timestamp", klen)) {
+                    bencode_int_value(&benk, &int_val);
+                    order->timestamp = int_val;            
+                }
+                else if (!strncmp(key, "items", klen)) {
+                    if (bencode_is_list(&benk)) {
+                        order->items_length = 0;
+                        while (bencode_list_has_next(&benk)) {
+                            bencode_t beni;
+                            bencode_list_get_next(&benk, &beni);
+                            if (bencode_is_dict(&beni)) order->items_length++;
+                        }
+                    }
+                }
+            }
+            return 1;
         }
     }
-        
-    while (bencode_dict_has_next(&ben)) {
-        bencode_dict_get_next(&ben, &benk, &key, &klen);
+    return 0;
+}
 
-        if (!strncmp(key, "id", klen)) {
-            bencode_int_value(&benk, &int_val);
-            order->id = int_val;
-        }
-        else if (!strncmp(key, "type", klen)) {
-            bencode_string_value(&benk, &str_val, &len);
-            order->type = str_val[0];
-        }
-        else if (!strncmp(key, "number", klen)) {
-            bencode_int_value(&benk, &int_val);
-            order->number = int_val;            
-        }
-        else if (!strncmp(key, "status", klen)) {
-            bencode_string_value(&benk, &str_val, &len);
-            order->status = str_val[0];
-        }
-        else if (!strncmp(key, "timestamp", klen)) {
-            bencode_int_value(&benk, &int_val);
-            order->timestamp = int_val;            
-        }
-        else if (!strncmp(key, "items", klen)) {
-            if (bencode_is_list(&benk)) {
-                order->items_length = 0;
-                while (bencode_list_has_next(&benk)) {                    
-                    bencode_t beni;
-                    bencode_list_get_next(&benk, &beni);
-                    if (bencode_is_dict(&beni)) order->items_length++;
+int order_get_int(order_t *order, char *int_key, int *intv) {
+    int klen0;
+    const char *key0;
+    bencode_t ben, benk;
+
+    bencode_init(&ben, order->bencode, strlen(order->bencode));
+
+    if (!bencode_is_dict(&ben)) return 0;
+    while (bencode_dict_has_next(&ben) && bencode_dict_get_next(&ben, &benk, &key0, &klen0)) {
+        if (!strncmp(key0, "orders", klen0) && bencode_is_list(&benk) && bencode_list_has_next(&benk)) {                    
+            bencode_list_get_next(&benk, &ben);
+
+            if (!bencode_is_dict(&ben)) continue;
+            while (bencode_dict_has_next(&ben)) {
+                long int int_val;
+                const char *str_val;
+                int klen, len;
+                const char *key;
+                bencode_t benk;
+
+                bencode_dict_get_next(&ben, &benk, &key, &klen);
+
+                if (!strncmp(key, int_key, klen)) {
+                    bencode_int_value(&benk, &int_val);
+                    *intv = int_val;
+                    return 1;
                 }
             }
         }
     }
+    return 0;
+}
+
+int order_get_string(order_t *order, char *str_key, char *strv) {
+    int klen0;
+    const char *key0;
+    bencode_t ben, benk;
+
+    bencode_init(&ben, order->bencode, strlen(order->bencode));
+
+    if (!bencode_is_dict(&ben)) return 0;
+    while (bencode_dict_has_next(&ben) && bencode_dict_get_next(&ben, &benk, &key0, &klen0)) {
+        if (!strncmp(key0, "orders", klen0) && bencode_is_list(&benk) && bencode_list_has_next(&benk)) {                    
+            bencode_list_get_next(&benk, &ben);
+
+            if (!bencode_is_dict(&ben)) continue;
+            while (bencode_dict_has_next(&ben)) {
+                long int int_val;
+                const char *str_val;
+                int klen, len;
+                const char *key;
+                bencode_t benk;
+
+                bencode_dict_get_next(&ben, &benk, &key, &klen);
+
+                if (!strncmp(key, str_key, klen)) {
+                    bencode_string_value(&benk, &str_val, &len);
+                    strncpy(strv, str_val, len);
+                    return 1;
+                }
+            }
+        }
+    }
+    return 0;
 }
 
 int order_get_instructions(order_t *order, char *instructions) {
@@ -414,36 +479,46 @@ int order_get_currency(order_t *order, char *currency) {
     }
     return 0;
 }
-        
+     
 int order_get_location(order_t *order, char *location) {
-    bencode_t ben;
+    int klen0;
+    const char *key0;
+    bencode_t ben, benk;
+
     bencode_init(&ben, order->bencode, strlen(order->bencode));
 
-    if (!bencode_is_dict(&ben)) return;
+    if (!bencode_is_dict(&ben)) return 0;
+    while (bencode_dict_has_next(&ben) && bencode_dict_get_next(&ben, &benk, &key0, &klen0)) {
+        if (!strncmp(key0, "orders", klen0) && bencode_is_list(&benk) && bencode_list_has_next(&benk)) {                    
+            bencode_list_get_next(&benk, &ben);
 
-    while (bencode_dict_has_next(&ben)) {
-        long int int_val;
-        const char *str_val;
-        int klen, len;
-        const char *key;
-        bencode_t benk;
+            if (!bencode_is_dict(&ben)) continue;
+            while (bencode_dict_has_next(&ben)) {
+                long int int_val;
+                const char *str_val;
+                int klen, len;
+                const char *key;
+                bencode_t benk;
 
-        bencode_dict_get_next(&ben, &benk, &key, &klen);
+                bencode_dict_get_next(&ben, &benk, &key, &klen);
 
-        if (!strncmp(key, "location", klen)) {
-            if (bencode_is_dict(&benk)) {
-                while (bencode_dict_has_next(&benk)) {
-                    long int int_val2;
-                    const char *str_val2;
-                    int klen2, len2;
-                    const char *key2;
-                    bencode_t benk2;
+                if (!strncmp(key, "location", klen)) {
+                    if (bencode_is_dict(&benk)) {
+                        while (bencode_dict_has_next(&benk)) {
+                            long int int_val2;
+                            const char *str_val2;
+                            int klen2, len2;
+                            const char *key2;
+                            bencode_t benk2;
 
-                    bencode_dict_get_next(&benk, &benk2, &key2, &klen2);
+                            bencode_dict_get_next(&benk, &benk2, &key2, &klen2);
 
-                    if (!strncmp(key2, "name", klen2)) {
-                        bencode_string_value(&benk2, &str_val2, &len2);
-                        strncpy(location, str_val2, len2);
+                            if (!strncmp(key2, "name", klen2)) {
+                                bencode_string_value(&benk2, &str_val2, &len2);
+                                strncpy(location, str_val2, len2);
+                                return 1;
+                            }
+                        }
                     }
                 }
             }
