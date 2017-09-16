@@ -584,6 +584,7 @@ int Display_Notice(char *message) {
 }
 
 int Print_Order(order_t *order) {
+    long int integer;
     char text_short[51];
     char text_medium[101];
     char text_long[501];
@@ -608,10 +609,10 @@ int Print_Order(order_t *order) {
     else if (order->type == 'D') Lib_PrnStr("         Type: Delivery\n");
 
     // location
-    memset(large_line, 0, sizeof(large_line));
     memset(text_short, 0, sizeof(text_short));
-    memset(text_medium, 0, sizeof(text_medium));
     if (order_get_location(order, text_short)) {
+        memset(text_medium, 0, sizeof(text_medium));
+        memset(large_line, 0, sizeof(large_line));
         sprintf(text_medium, "Location: %s", text_short);
         sprintf(large_line, "%*s\n", center_padding(32, strlen(text_medium)), text_medium);
         Lib_PrnStr(large_line);
@@ -619,7 +620,46 @@ int Print_Order(order_t *order) {
 
     Lib_PrnStr("\n\n");
     memset(large_line, 0, sizeof(large_line));
-    sprintf(large_line, "Number of items: %i\n\n\n", order->items_length);
+    sprintf(large_line, "Number of items: %i\n", order->items_length);
+    Lib_PrnStr(large_line);
+
+    // user information
+    memset(text_short, 0, sizeof(text_short));
+    memset(text_medium, 0, sizeof(text_medium));
+    memset(text_long, 0, sizeof(text_long));
+    if (order_get_user(&order, integer, text_medium, text_short, text_long)) {
+        Lib_PrnStr("\n\n");
+
+        memset(large_line, 0, sizeof(large_line));
+        sprintf(large_line, "%*s\n", center_padding(32, strlen(text_medium)), text_medium);
+        Lib_PrnStr(large_line);        
+        
+        memset(large_line, 0, sizeof(large_line));
+        sprintf(large_line, "%*s\n", center_padding(32, strlen(text_short)), text_short);
+        Lib_PrnStr(large_line);        
+        
+        memset(large_line, 0, sizeof(large_line));
+        sprintf(large_line, "%*s\n", center_padding(32, strlen(text_long)), text_long);
+        Lib_PrnStr(large_line);        
+    }
+
+    // directions and special instructions
+    memset(text_long, 0, sizeof(text_long));
+    if (order_get_directions(&order, text_long)) {
+        Lib_PrnStr("\n\n");
+        sprintf(large_line, "\nDelivery Instructions:\n%s\n", text_long);
+        Lib_PrnStr(large_line);        
+    }
+
+    memset(text_long, 0, sizeof(text_long));
+    if (order_get_instructions(&order, text_long)) {
+        Lib_PrnStr("\n\n");
+        sprintf(large_line, "\nSpecial Instructions:\n%s\n", text_long);
+        Lib_PrnStr(large_line);        
+    }
+
+
+
 
     // Lib_PrnStr("ABCDEFGHIJKLMNOPQRSTUVWXYZ\n");
     // Lib_PrnStr("abcdefghijklmnopqrstuvwxyz\n");
