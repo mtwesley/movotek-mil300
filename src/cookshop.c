@@ -19,7 +19,7 @@ int sms_get_msg(char *msg, int *msg_len, int max_len) {
     ushort len, pdu_len, msg_id;
     unsigned char *rsp, *tmp, *pdu;
     unsigned char cmd[20];
-    unsigned char buf[8000];
+    unsigned char buf[SMS_BUFFER_LENGTH];
 
     int has_message = FALSE;
     int multipart_ref = 0;
@@ -30,9 +30,9 @@ int sms_get_msg(char *msg, int *msg_len, int max_len) {
         msg_ids[j] = 0;
     }
 
-    memset(buf, 0, 8000);
+    memset(buf, 0, SMS_BUFFER_LENGTH);
     strcpy(cmd, "AT+CMGL=4\r");
-    if ((Wls_ExecuteCmd(cmd, strlen(cmd), buf, 8000, &len, 3000) == WLS_OK) && strlen(buf)) {
+    if ((Wls_ExecuteCmd(cmd, strlen(cmd), buf, SMS_BUFFER_LENGTH, &len, 3000) == WLS_OK) && strlen(buf)) {
         tmp = buf;
         while (rsp = strstr(tmp, "+CMGL: ")) {
             pdu = strstr(rsp, "\r\n") + 2;
@@ -52,7 +52,7 @@ int sms_get_msg(char *msg, int *msg_len, int max_len) {
                 int diff = datetime_to_epoch(new_datetime) - datetime_to_epoch(sms.timestamp);
                 if (diff > 3600) {
                     sprintf(cmd, "AT+CMGD=%d,0\r", msg_id);
-                    Wls_ExecuteCmd(cmd, strlen(cmd), buf, 8000, &len, 1000);
+                    Wls_ExecuteCmd(cmd, strlen(cmd), buf, SMS_BUFFER_LENGTH, &len, 1000);
                     multipart_ref = 0;
                     continue;
                 }
@@ -91,7 +91,7 @@ int sms_get_msg(char *msg, int *msg_len, int max_len) {
                 j = i + 1;
                 if (msg_ids[j] != 0) {
                     sprintf(cmd, "AT+CMGD=%d,0\r", msg_ids[j]);
-                    Wls_ExecuteCmd(cmd, strlen(cmd), buf, 8000, &len, 1000);
+                    Wls_ExecuteCmd(cmd, strlen(cmd), buf, SMS_BUFFER_LENGTH, &len, 1000);
                 }
                 if (strlen(msg_parts[j])) strncat(msg, msg_parts[j], max_len);
             }
@@ -142,7 +142,7 @@ int order_parse(order_t *order) {
                 }
                 else if (!strncmp(key, "timestamp", klen)) {
                     bencode_int_value(&benk, &int_val);
-                    order->timestamp = int_val;            
+                    epoch_to_date_time(order->timestamp, int_val);            
                 }
                 else if (!strncmp(key, "items", klen)) {
                     if (bencode_is_list(&benk)) {
@@ -499,7 +499,64 @@ int order_get_item_string(order_t *order, int item, char *str_key, char *strv) {
     return 0;
 }
 
-int order_get_item_restaurant(order_t *order, int item, unsigned int *id, char *code, char *name) {
+int order_get_item_int(order_t *order, int item, char *int_key, int *intv) {
+    int klen0;
+    const char *key0;
+    bencode_t ben, benk;
+
+    bencode_init(&ben, order->bencode, strlen(order->bencode));
+
+    if (!bencode_is_dict(&ben)) return 0;
+    while (bencode_dict_has_next(&ben) && bencode_dict_get_next(&ben, &benk, &key0, &klen0)) {
+        if (!strncmp(key0, "orders", klen0) && bencode_is_list(&benk) && bencode_list_has_next(&benk)) {                    
+            bencode_list_get_next(&benk, &ben);
+
+            if (!bencode_is_dict(&ben)) continue;
+            while (bencode_dict_has_next(&ben)) {
+                long int int_val;
+                const char *str_val;
+                int klen, len;
+                const char *key;
+                bencode_t benk;
+
+                bencode_dict_get_next(&ben, &benk, &key, &klen);
+
+                if (!strncmp(key, "items", klen)) {
+                    if (bencode_is_list(&benk)) {
+                        int count = 0;
+                        while (bencode_list_has_next(&benk)) {                    
+                            bencode_t beni;
+
+                            bencode_list_get_next(&benk, &beni);
+                            if (bencode_is_dict(&beni)) {
+                                if (item == count++) {
+                                    while (bencode_dict_has_next(&beni)) {
+                                        long int int_val3;
+                                        const char *str_val3;
+                                        int klen3, len3;
+                                        const char *key3;
+                                        bencode_t benik;
+                                        
+                                        bencode_dict_get_next(&beni, &benik, &key3, &klen3);                            
+
+                                        if (!strncmp(key3, int_key, klen3)) {
+                                            bencode_int_value(&benik, &int_val3);
+                                            *intv = int_val3;
+                                        }
+                                    }
+                                    return 1;
+                                }
+                            }
+                        }    
+                    }
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+int order_get_item_restaurant(order_t *order, int item, unsigned int *id, char *name, char *code) {
     int klen0;
     const char *key0;
     bencode_t ben, benk;
@@ -582,12 +639,24 @@ int order_get_item_price(order_t *order, int item, char *price) {
     return order_get_item_string(order, item, "price", price);
 }
 
+int order_get_item_cost(order_t *order, int item, char *cost) {
+    return order_get_item_string(order, item, "price", cost);
+}
+
+int order_get_item_tax(order_t *order, int item, char *tax) {
+    return order_get_item_string(order, item, "tax", tax);
+}
+
+int order_get_item_total(order_t *order, int item, char *total) {
+    return order_get_item_string(order, item, "total", total);
+}
+
 int order_get_item_margin(order_t *order, int item, char *margin) {
     return order_get_item_string(order, item, "margin", margin);
 }
 
-int order_get_item_quantity(order_t *order, int item, char *quantity) {
-    return order_get_item_string(order, item, "quantity", quantity);
+int order_get_item_quantity(order_t *order, int item, int *quantity) {
+    return order_get_item_int(order, item, "quantity", quantity);
 }
 
 int order_get_item_currency(order_t *order, int item, char *currency) {

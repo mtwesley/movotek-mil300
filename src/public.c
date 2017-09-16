@@ -28,7 +28,6 @@ static unsigned short days[4][12] = {
     {1096,1127,1155,1186,1216,1247,1277,1308,1339,1369,1400,1430},
 };
 
-
 unsigned long int datetime_to_epoch(int *datetime) {
     unsigned int second = datetime[5];  // 0-59
     unsigned int minute = datetime[4];  // 0-59
@@ -43,8 +42,15 @@ int center_padding(int width, int str_len) {
 	return width / 2 + (str_len) / 2;
 }
 
-void epoch_to_date_time(int *date_time, unsigned int epoch)
-{
+int pretty_time(int hour, int minute, char *out, int max_len) {
+	if (hour < 1)       snprintf(out, max_len, "12:%02d AM", minute);
+    else if (hour < 10) snprintf(out, max_len, "%d:%02d AM", hour, minute);
+    else if (hour < 12) snprintf(out, max_len, "%d:%02d AM", hour, minute);
+    else if (hour < 13) snprintf(out, max_len, "12:%02d PM", minute);
+    else if (hour > 12) snprintf(out, max_len, "%d:%02d PM", hour - 12, minute);
+}
+
+void epoch_to_date_time(int *date_time, unsigned long int epoch) {
     date_time[5] = epoch%60; epoch /= 60;
     date_time[4] = epoch%60; epoch /= 60;
     date_time[3]   = epoch%24; epoch /= 24;

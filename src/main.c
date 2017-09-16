@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <time.h>
 
 #include "public.h"
 #include "logos.h"
@@ -319,17 +320,20 @@ unsigned char Display_Waiting(int force) {
         Lib_KbFlush();
 
         Wls_Init();
-        Lib_PrnInit();
         while (TRUE) {
-            char msg[2000];
+            char msg[SMS_MESSAGE_LENGTH];
             int msg_len;
 
             memset(msg, 0, sizeof(msg));
-            sms_get_msg(&msg, &msg_len, 2000);
+            sms_get_msg(&msg, &msg_len, SMS_MESSAGE_LENGTH);
+            
+            // char *test_bencode = "d6:ordersld8:cash_due4:2.008:currency3:USD10:directions7:ghghghf8:discounti0e3:due4:0.005:extrai0e3:fee1:02:idi25494e12:instructions0:5:itemsld4:code0:8:currency3:USD2:idi858e6:margin4:0.004:name19:Small Water (500ml)5:price4:2.008:quantityi1e10:restaurantd4:code3:DRK2:idi16e4:name6:Drinkse13:restaurant_idi16eee8:locationd4:code3:MPT2:idi1e4:name11:Mamba Pointe11:location_idi1e6:numberi125494e4:owed4:0.004:paid4:2.006:status1:P9:timestampi1503243805e5:total4:2.004:type1:D4:userd5:email27:mlentoo.wesley@cookshop.biz2:idi4e4:name15:Mlen-Too Wesley5:phone10:0776034108e7:user_idi4eeee";
+            // char *test_bencode = "d6:ordersld8:cash_due5:37.008:currency3:USD10:directions66:Sinkor 10th st.-sea side-Payne avenue-Fayad building-Appartment #68:discount1:03:due5:37.005:extra1:03:fee1:02:idi15385e12:instructions0:5:itemsld4:code0:4:cost4:4.008:currency3:USD2:idi861e6:margin4:0.004:name10:Coke (Can)5:price4:2.008:quantityi2e10:restaurantd4:code3:DRK2:idi16e4:name6:Drinkse13:restaurant_idi16e3:tax1:05:total4:4.00ed4:code0:4:cost4:7.008:currency3:USD2:idi3903e6:margin4:0.004:name23:Ura Maki Atlantic Green5:price4:7.008:quantityi1e10:restaurantd4:code3:BSB2:idi203e4:name29:Barracuda Seafood & Sushi Bare13:restaurant_idi203e3:tax1:05:total4:7.00ed4:code0:4:cost4:6.008:currency3:USD2:idi3949e6:margin4:0.004:name24:Temaki Crispy Spicy Tuna5:price4:6.008:quantityi1e10:restaurantd4:code3:BSB2:idi203e4:name29:Barracuda Seafood & Sushi Bare13:restaurant_idi203e3:tax1:05:total4:6.00ed4:code0:4:cost5:20.008:currency3:USD2:idi3988e6:margin4:0.004:name12:Crab Platter5:price5:20.008:quantityi1e10:restaurantd4:code3:BSB2:idi203e4:name29:Barracuda Seafood & Sushi Bare13:restaurant_idi203e3:tax1:05:total5:20.00ee8:locationd4:code3:SKR2:idi4e4:name6:Sinkore11:location_idi4e6:numberi115385e4:owed1:04:paid1:06:status1:C9:timestampi1503164688e5:total5:37.004:type1:D4:userd5:email16:i.15@hotmail.com2:idi1205e4:name9:Ali Fayad5:phone10:0776773333e7:user_idi1205eeee";
+            // strcpy(msg, test_bencode);
 
             if (strlen(msg)) {
                 order_t order;
-                order.bencode = msg;
+                strcpy(order.bencode, msg);
 
                 // memset(order.bencode, 0, sizeof(order.bencode));
                 // strcpy(order.bencode, msg);
@@ -351,7 +355,7 @@ unsigned char Display_Waiting(int force) {
                     // Lib_PrnStr(msg);
                 }
             }
-            Lib_PrnStart();
+            Lib_DelayMs(5000);
             
             if (Lib_KbCheck()) continue;
             ucKey = Lib_KbGetCh();
@@ -584,23 +588,24 @@ int Display_Notice(char *message) {
 }
 
 int Print_Order(order_t *order) {
-    long int integer;
+    int i;
+    unsigned long int integer;
     char text_short[51];
     char text_medium[101];
     char text_long[501];
     char large_line[33]; // large line holds 32 characters
-    char small_line[49]; // small line holds 48 characters
+    char medium_line[49]; // small line holds 48 characters
 
 	Lib_PrnInit();
 
-    Lib_PrnStr("\n\n"); // give some space
+    Lib_PrnStr("\n\n\n"); // give some space
     Lib_PrnLogo(g_Display_logo_384);
 
     Lib_PrnSetFont(PRN_FONT_LARGE);
 
     // number
     memset(large_line, 0, sizeof(large_line));
-    sprintf(large_line, "         Order: CS%i\n", order->number);
+    sprintf(large_line, "        Order: CS%i\n", order->number);
     Lib_PrnStr(large_line);
 
     // type
@@ -618,67 +623,126 @@ int Print_Order(order_t *order) {
         Lib_PrnStr(large_line);
     }
 
-    Lib_PrnStr("\n\n");
-    memset(large_line, 0, sizeof(large_line));
-    sprintf(large_line, "Number of items: %i\n", order->items_length);
+    // // date and time
+    memset(text_short, 0, sizeof(text_short));
+    memset(text_medium, 0, sizeof(text_medium));
+    pretty_time(order->timestamp[3], order->timestamp[4], text_short, sizeof(text_short));
+    sprintf(text_medium, "September %i, 20%i at %s", order->timestamp[2], order->timestamp[0], text_short);
+    sprintf(large_line, "\n%*s\n", center_padding(32, strlen(text_medium)), text_medium);
     Lib_PrnStr(large_line);
 
     // user information
     memset(text_short, 0, sizeof(text_short));
     memset(text_medium, 0, sizeof(text_medium));
     memset(text_long, 0, sizeof(text_long));
-    if (order_get_user(&order, integer, text_medium, text_short, text_long)) {
+    if (order_get_user(order, &integer, text_medium, text_short, text_long)) {
         Lib_PrnStr("\n\n");
 
         memset(large_line, 0, sizeof(large_line));
         sprintf(large_line, "%*s\n", center_padding(32, strlen(text_medium)), text_medium);
         Lib_PrnStr(large_line);        
         
-        memset(large_line, 0, sizeof(large_line));
-        sprintf(large_line, "%*s\n", center_padding(32, strlen(text_short)), text_short);
-        Lib_PrnStr(large_line);        
+        if (strlen(text_long)) {
+            memset(large_line, 0, sizeof(large_line));
+            sprintf(large_line, "%*s\n", center_padding(32, strlen(text_long)), text_long);
+            Lib_PrnStr(large_line); 
+        }       
         
-        memset(large_line, 0, sizeof(large_line));
-        sprintf(large_line, "%*s\n", center_padding(32, strlen(text_long)), text_long);
-        Lib_PrnStr(large_line);        
+        if (strlen(text_short)) {
+            memset(large_line, 0, sizeof(large_line));
+            sprintf(large_line, "%*s\n", center_padding(32, strlen(text_short)), text_short);
+            Lib_PrnStr(large_line);  
+        }      
     }
 
-    // directions and special instructions
-    memset(text_long, 0, sizeof(text_long));
-    if (order_get_directions(&order, text_long)) {
+    // items
+    if (order->items_length) {
         Lib_PrnStr("\n\n");
-        sprintf(large_line, "\nDelivery Instructions:\n%s\n", text_long);
-        Lib_PrnStr(large_line);        
+        for (i = 0; i < order->items_length; i++) {
+            memset(text_short, 0, sizeof(text_short));
+            memset(text_medium, 0, sizeof(text_medium));
+            memset(text_long, 0, sizeof(text_long));
+            if (order_get_item(order, i, &integer, text_medium, text_short)) {
+                Lib_PrnStr("- - - - - - - - - - - - - - - - \n");
+
+                // item name
+                memset(large_line, 0, sizeof(large_line));
+                sprintf(large_line, "%s\n", text_medium);
+                Lib_PrnStr(large_line);  
+
+                // restaurant name
+                memset(text_short, 0, sizeof(text_short));
+                memset(text_medium, 0, sizeof(text_medium));
+                memset(text_long, 0, sizeof(text_long));
+                if (order_get_item_restaurant(order, i, &integer, text_medium, text_short)) {
+                    Lib_PrnSetFont(PRN_FONT_MEDIUM);
+                    memset(medium_line, 0, sizeof(medium_line));
+                    sprintf(medium_line, "%s\n\n", text_medium);
+                    Lib_PrnStr(medium_line);
+                    Lib_PrnSetFont(PRN_FONT_LARGE);
+                }
+
+                // quantity and sub-total
+                memset(text_short, 0, sizeof(text_short));
+                memset(text_medium, 0, sizeof(text_medium));
+                if ((order_get_item_quantity(order, i, &integer)) && (order_get_item_total(order, i, text_medium))) {
+                    memset(large_line, 0, sizeof(large_line));
+                    sprintf(large_line, "Qty: %-10.iSub-Total: %6.6s\n", integer, text_medium);
+                    Lib_PrnStr(large_line);
+                }
+            }
+        }
+        Lib_PrnStr("--------------------------------\n");
     }
 
+    // // total
+    memset(text_short, 0, sizeof(text_short));
+    memset(large_line, 0, sizeof(large_line));
+    if (order_get_total(order, text_short) && strlen(text_short)) {
+        if (!strcmp(text_short, "0")) strcpy(text_short, "0.00");
+        sprintf(large_line, "Total %26.26s\n", text_short);
+        Lib_PrnStr("--------------------------------\n");
+        Lib_PrnStr(large_line);
+        Lib_PrnStr("--------------------------------\n");
+    }
+
+    // paid
+    memset(text_short, 0, sizeof(text_short));
+    memset(large_line, 0, sizeof(large_line));
+    if (order_get_paid(order, text_short) && strlen(text_short) && strcmp(text_short, "0")) {
+        sprintf(large_line, "Total Paid %21.21s\n", text_short);
+        Lib_PrnStr(large_line);
+        Lib_PrnStr("--------------------------------\n");
+    }
+
+    // // cash due
+    memset(text_short, 0, sizeof(text_short));
+    memset(large_line, 0, sizeof(large_line));
+    if (order_get_cash_due(order, text_short) && strlen(text_short) && strcmp(text_short, "0")) {
+        sprintf(large_line, "Total Due %22.22s\n", text_short);
+        Lib_PrnStr("--------------------------------\n");
+        Lib_PrnStr(large_line);
+        Lib_PrnStr("--------------------------------\n");
+    }
+
+    // directions
     memset(text_long, 0, sizeof(text_long));
-    if (order_get_instructions(&order, text_long)) {
+    if (order_get_directions(order, text_long) && strlen(text_long)) {
         Lib_PrnStr("\n\n");
-        sprintf(large_line, "\nSpecial Instructions:\n%s\n", text_long);
+        sprintf(large_line, "\nDelivery Instructions: %s\n", text_long);
         Lib_PrnStr(large_line);        
     }
 
+    // special instructions
+    memset(text_long, 0, sizeof(text_long));
+    if (order_get_instructions(order, text_long) && strlen(text_long)) {
+        Lib_PrnStr("\n\n");
+        sprintf(large_line, "\nSpecial Instructions: %s\n", text_long);
+        Lib_PrnStr(large_line);        
+    }
 
-
-
-    // Lib_PrnStr("ABCDEFGHIJKLMNOPQRSTUVWXYZ\n");
-    // Lib_PrnStr("abcdefghijklmnopqrstuvwxyz\n");
-    // // Lib_PrnStr("1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890\n");
-    // Lib_PrnStr("\n\n");
-
-    // Lib_PrnSetFont(PRN_FONT_MEDIUM);
-
-    // Lib_PrnStr("\n\n");
-    // Lib_PrnStr("ABCDEFGHIJKLMNOPQRSTUVWXYZ\n");
-    // Lib_PrnStr("abcdefghijklmnopqrstuvwxyz\n");
-    // // Lib_PrnStr("1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890\n");
-
-    // Lib_PrnSetFont(PRN_FONT_LARGE);
-
-
-
-    Lib_PrnStr("\n\n\n\n");
-    Lib_PrnStr("////////////////////////////////");
+    // Lib_PrnStr("\n\n\n\n");
+    // Lib_PrnStr("////////////////////////////////");
     Lib_PrnStr("\n\n\n\n\n\n\n\n\n\n");
 
 	// start printing
