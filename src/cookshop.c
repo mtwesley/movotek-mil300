@@ -10,11 +10,11 @@
 #include "bencode.h"
 #include "sms_pdu.h"
 
-int sms_get_msg(char *msg, int *msg_len, int max_len) {
+int sms_get_msg(unsigned char *msg, int *msg_len, int max_len) {
     int i, j;
     sms_t sms;
 
-    char msg_parts[SMS_MULTIPART_MAX][SMS_MULTIPART_SIZE];
+    unsigned char msg_parts[SMS_MULTIPART_MAX][SMS_MULTIPART_SIZE];
     ushort msg_ids[SMS_MULTIPART_MAX];
 
     ushort len, pdu_len, msg_id;
@@ -24,6 +24,8 @@ int sms_get_msg(char *msg, int *msg_len, int max_len) {
 
     int has_message = FALSE;
     int multipart_ref = 0;
+
+    Wls_Init();
 
     for (i = 0; i < SMS_MULTIPART_MAX; i++) {
         j = i + 1;

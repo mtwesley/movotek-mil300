@@ -10,7 +10,7 @@ typedef struct order_t {
     unsigned long int number;
     char status;
     unsigned long int timestamp;
-    char bencode[SMS_MESSAGE_LENGTH];
+    unsigned char bencode[SMS_MESSAGE_LENGTH];
     int items_length;
 } order_t;
 

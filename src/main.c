@@ -319,9 +319,8 @@ unsigned char Display_Waiting(int force) {
         // wait for OK, ESC, CANCEL, or MENU
         Lib_KbFlush();
 
-        Wls_Init();
         while (TRUE) {
-            char msg[SMS_MESSAGE_LENGTH];
+            unsigned char msg[SMS_MESSAGE_LENGTH];
             int msg_len;
 
             memset(msg, 0, sizeof(msg));
@@ -338,19 +337,22 @@ unsigned char Display_Waiting(int force) {
                 
                 if (order_parse(&order)) {
                     Print_Order(&order);
-                    // int fhandle;
-                    // char fname[16];
+                    
+                    int fid;
+                    char fname[16];
+
+                    // open file for status
+                    memset(fname, 0, sizeof(fname));
+                    sprintf(fname, "Order_%s", order.status);
+                    if (Lib_FileExist(fname) != FILE_NOTEXIST) Lib_FileRemove(fname);                    
+                    fid = Lib_FileOpen(fname, O_CREATE);
+                    Lib_FileSeek(fid, 0, FILE_SEEK_SET);
+                    Lib_FileWrite(fid, (BYTE *)order->bencode, strlen(order->bencode));
+
+                    // scroll through status files to check for order
                     // memset(fname, 0, sizeof(fname));
-                    // sprintf(fname, "Orders_%s", order.status);
-                    // fhandle = Lib_FileOpen(fname, O_CREATE);
-
-                    // char notice[100];
-                    // memset(notice, 0, sizeof(notice));
-                    // sprintf(notice, "Order CS%i\n\n\n\n\n\n\n\n\n\n", order.number);
-
-                    // Lib_PrnStr(notice);
-                    // Lib_PrnStr("\n\n\n\n\n\n\n\n\n\n\n");
-                    // Lib_PrnStr(msg);
+                    // sprintf(fname, "Order_%s", order.status);
+                    
                 }
             }
             
@@ -756,9 +758,9 @@ int Print_Order(order_t *order) {
         Lib_PrnStr(large_line);        
     }
 
-
-    // Lib_PrnStr("////////////////////////////////\n");
-    Lib_PrnStr("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+    Lib_PrnStr("\n\n\n\n\n");
+    Lib_PrnStr("  * * * www.cookshop.biz * * *  \n");
+    Lib_PrnStr("\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
 
 	// start printing
     Lib_PrnStart();
