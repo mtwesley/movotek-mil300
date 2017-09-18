@@ -1,3 +1,4 @@
+#include <time.h>
 #include "sms_pdu.h"
 
 #ifndef COOKSHOP_H
@@ -8,7 +9,7 @@ typedef struct order_t {
     char type;
     unsigned long int number;
     char status;
-    unsigned int timestamp[8];
+    unsigned long int timestamp;
     char bencode[SMS_MESSAGE_LENGTH];
     int items_length;
 } order_t;

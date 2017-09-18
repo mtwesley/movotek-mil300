@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <time.h>
 
 #include "public.h"
 #include "cookshop.h"
@@ -142,7 +143,7 @@ int order_parse(order_t *order) {
                 }
                 else if (!strncmp(key, "timestamp", klen)) {
                     bencode_int_value(&benk, &int_val);
-                    epoch_to_date_time(order->timestamp, int_val);            
+                    order->timestamp = int_val;
                 }
                 else if (!strncmp(key, "items", klen)) {
                     if (bencode_is_list(&benk)) {
