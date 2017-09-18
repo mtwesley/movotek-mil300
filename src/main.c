@@ -695,6 +695,24 @@ int Print_Order(order_t *order) {
         Lib_PrnStr("--------------------------------\n");
     }
 
+    // fees
+    memset(text_short, 0, sizeof(text_short));
+    memset(large_line, 0, sizeof(large_line));
+    if (order_get_fee(order, text_short) && strlen(text_short) && (strcmp(text_short, "0"))) {
+        sprintf(large_line, "Fees %27.27s\n", text_short);
+        Lib_PrnStr("- - - - - - - - - - - - - - - - \n");
+        Lib_PrnStr(large_line);
+    }
+
+    // discount
+    memset(text_short, 0, sizeof(text_short));
+    memset(large_line, 0, sizeof(large_line));
+    if (order_get_fee(order, text_short) && strlen(text_short) && (strcmp(text_short, "0"))) {
+        sprintf(large_line, "Fees %27.27s\n", text_short);
+        Lib_PrnStr("- - - - - - - - - - - - - - - - \n");
+        Lib_PrnStr(large_line);
+    }
+
     // // total
     memset(text_short, 0, sizeof(text_short));
     memset(large_line, 0, sizeof(large_line));
