@@ -325,11 +325,12 @@ unsigned char Display_Waiting(int force) {
             int msg_len;
 
             memset(msg, 0, sizeof(msg));
-            sms_get_msg(&msg, &msg_len, SMS_MESSAGE_LENGTH);
+            // sms_get_msg(&msg, &msg_len, SMS_MESSAGE_LENGTH);
             
             // char *test_bencode = "d6:ordersld8:cash_due4:2.008:currency3:USD10:directions7:ghghghf8:discounti0e3:due4:0.005:extrai0e3:fee1:02:idi25494e12:instructions0:5:itemsld4:code0:8:currency3:USD2:idi858e6:margin4:0.004:name19:Small Water (500ml)5:price4:2.008:quantityi1e10:restaurantd4:code3:DRK2:idi16e4:name6:Drinkse13:restaurant_idi16eee8:locationd4:code3:MPT2:idi1e4:name11:Mamba Pointe11:location_idi1e6:numberi125494e4:owed4:0.004:paid4:2.006:status1:P9:timestampi1503243805e5:total4:2.004:type1:D4:userd5:email27:mlentoo.wesley@cookshop.biz2:idi4e4:name15:Mlen-Too Wesley5:phone10:0776034108e7:user_idi4eeee";
-            // char *test_bencode = "d6:ordersld8:cash_due5:37.008:currency3:USD10:directions66:Sinkor 10th st.-sea side-Payne avenue-Fayad building-Appartment #68:discount1:03:due5:37.005:extra1:03:fee1:02:idi15385e12:instructions0:5:itemsld4:code0:4:cost4:4.008:currency3:USD2:idi861e6:margin4:0.004:name10:Coke (Can)5:price4:2.008:quantityi2e10:restaurantd4:code3:DRK2:idi16e4:name6:Drinkse13:restaurant_idi16e3:tax1:05:total4:4.00ed4:code0:4:cost4:7.008:currency3:USD2:idi3903e6:margin4:0.004:name23:Ura Maki Atlantic Green5:price4:7.008:quantityi1e10:restaurantd4:code3:BSB2:idi203e4:name29:Barracuda Seafood & Sushi Bare13:restaurant_idi203e3:tax1:05:total4:7.00ed4:code0:4:cost4:6.008:currency3:USD2:idi3949e6:margin4:0.004:name24:Temaki Crispy Spicy Tuna5:price4:6.008:quantityi1e10:restaurantd4:code3:BSB2:idi203e4:name29:Barracuda Seafood & Sushi Bare13:restaurant_idi203e3:tax1:05:total4:6.00ed4:code0:4:cost5:20.008:currency3:USD2:idi3988e6:margin4:0.004:name12:Crab Platter5:price5:20.008:quantityi1e10:restaurantd4:code3:BSB2:idi203e4:name29:Barracuda Seafood & Sushi Bare13:restaurant_idi203e3:tax1:05:total5:20.00ee8:locationd4:code3:SKR2:idi4e4:name6:Sinkore11:location_idi4e6:numberi115385e4:owed1:04:paid1:06:status1:C9:timestampi1503164688e5:total5:37.004:type1:D4:userd5:email16:i.15@hotmail.com2:idi1205e4:name9:Ali Fayad5:phone10:0776773333e7:user_idi1205eeee";
-            // strcpy(msg, test_bencode);
+
+            char *test_bencode = "d6:ordersld8:cash_due5:37.008:currency3:USD10:directions66:Sinkor 10th st.-sea side-Payne avenue-Fayad building-Appartment #68:discount1:03:due5:37.005:extra1:03:fee1:02:idi15385e12:instructions0:5:itemsld4:code0:4:cost4:4.008:currency3:USD2:idi861e6:margin4:0.004:name10:Coke (Can)5:price4:2.008:quantityi2e10:restaurantd4:code3:DRK2:idi16e4:name6:Drinkse13:restaurant_idi16e3:tax1:05:total4:4.00ed4:code0:4:cost4:7.008:currency3:USD2:idi3903e6:margin4:0.004:name23:Ura Maki Atlantic Green5:price4:7.008:quantityi1e10:restaurantd4:code3:BSB2:idi203e4:name29:Barracuda Seafood & Sushi Bare13:restaurant_idi203e3:tax1:05:total4:7.00ed4:code0:4:cost4:6.008:currency3:USD2:idi3949e6:margin4:0.004:name24:Temaki Crispy Spicy Tuna5:price4:6.008:quantityi1e10:restaurantd4:code3:BSB2:idi203e4:name29:Barracuda Seafood & Sushi Bare13:restaurant_idi203e3:tax1:05:total4:6.00ed4:code0:4:cost5:20.008:currency3:USD2:idi3988e6:margin4:0.004:name12:Crab Platter5:price5:20.008:quantityi1e10:restaurantd4:code3:BSB2:idi203e4:name29:Barracuda Seafood & Sushi Bare13:restaurant_idi203e3:tax1:05:total5:20.00ee8:locationd4:code3:SKR2:idi4e4:name6:Sinkore11:location_idi4e6:numberi115385e4:owed1:04:paid1:06:status1:C9:timestampi1503164688e5:total5:37.004:type1:D4:userd5:email16:i.15@hotmail.com2:idi1205e4:name9:Ali Fayad5:phone10:0776773333e7:user_idi1205eeee";
+            strcpy(msg, test_bencode);
 
             if (strlen(msg)) {
                 order_t order;
@@ -677,7 +678,7 @@ int Print_Order(order_t *order) {
                 if (order_get_item_restaurant(order, i, &integer, text_medium, text_short)) {
                     Lib_PrnSetFont(PRN_FONT_MEDIUM);
                     memset(medium_line, 0, sizeof(medium_line));
-                    sprintf(medium_line, "%s\n\n", text_medium);
+                    sprintf(medium_line, "%s\n", text_medium);
                     Lib_PrnStr(medium_line);
                     Lib_PrnSetFont(PRN_FONT_LARGE);
                 }
@@ -692,7 +693,6 @@ int Print_Order(order_t *order) {
                 }
             }
         }
-        Lib_PrnStr("--------------------------------\n");
     }
 
     // fees
@@ -719,9 +719,8 @@ int Print_Order(order_t *order) {
     if (order_get_total(order, text_short) && strlen(text_short)) {
         if (!strcmp(text_short, "0")) strcpy(text_short, "0.00");
         sprintf(large_line, "Total %26.26s\n", text_short);
-        Lib_PrnStr("--------------------------------\n");
+        Lib_PrnStr("================================\n");
         Lib_PrnStr(large_line);
-        Lib_PrnStr("--------------------------------\n");
     }
 
     // paid
@@ -729,25 +728,27 @@ int Print_Order(order_t *order) {
     memset(large_line, 0, sizeof(large_line));
     if (order_get_paid(order, text_short) && strlen(text_short) && strcmp(text_short, "0")) {
         sprintf(large_line, "Total Paid %21.21s\n", text_short);
-        Lib_PrnStr(large_line);
         Lib_PrnStr("--------------------------------\n");
+        Lib_PrnStr(large_line);
     }
 
     // // cash due
     memset(text_short, 0, sizeof(text_short));
     memset(large_line, 0, sizeof(large_line));
-    if (order_get_cash_due(order, text_short) && strlen(text_short) && strcmp(text_short, "0")) {
+    if (order_get_cash_due(order, text_short) && strlen(text_short)) {
+        if (!strcmp(text_short, "0")) strcpy(text_short, "0.00");
         sprintf(large_line, "Total Due %22.22s\n", text_short);
-        Lib_PrnStr("--------------------------------\n");
+        Lib_PrnStr("================================\n");
         Lib_PrnStr(large_line);
-        Lib_PrnStr("--------------------------------\n");
     }
+    
+    Lib_PrnStr("================================\n");
 
     // directions
     memset(text_long, 0, sizeof(text_long));
     if (order_get_directions(order, text_long) && strlen(text_long)) {
         Lib_PrnStr("\n\n");
-        sprintf(large_line, "\nDelivery Instructions: %s\n", text_long);
+        sprintf(large_line, "Delivery Instructions: %s\n", text_long);
         Lib_PrnStr(large_line);        
     }
 
@@ -755,13 +756,13 @@ int Print_Order(order_t *order) {
     memset(text_long, 0, sizeof(text_long));
     if (order_get_instructions(order, text_long) && strlen(text_long)) {
         Lib_PrnStr("\n\n");
-        sprintf(large_line, "\nSpecial Instructions: %s\n", text_long);
+        sprintf(large_line, "Special Instructions: %s\n", text_long);
         Lib_PrnStr(large_line);        
     }
 
-    // Lib_PrnStr("\n\n\n\n");
-    // Lib_PrnStr("////////////////////////////////");
-    Lib_PrnStr("\n\n\n\n\n\n\n\n\n\n");
+
+    // Lib_PrnStr("////////////////////////////////\n");
+    Lib_PrnStr("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
 
 	// start printing
     Lib_PrnStart();
