@@ -350,7 +350,7 @@ unsigned char Display_Waiting(int force) {
                     // sprintf(buf, "%c,%i,%s\n", order.type, order.number, order.bencode)
                     // Lib_FileSeek(fid, 0, FILE_SEEK_END);
                     // Lib_FileWrite(fid, (BYTE *))
-                    // Lib_FileWrite(fid, (BYTE *)order->bencode, strlen(order->bencode));
+                    // Lib_FileWrite(fid, (BYTE *)order.bencode, strlen(order->bencode));
 
                     // scroll through status files to check for order
                     // memset(fname, 0, sizeof(fname));
@@ -761,9 +761,9 @@ int Print_Order(order_t *order) {
         Lib_PrnStr(large_line);        
     }
 
-    Lib_PrnStr("\n\n\n\n\n");
+    Lib_PrnStr("\n\n\n");
     Lib_PrnStr("  * * * www.cookshop.biz * * *  \n");
-    Lib_PrnStr("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+    Lib_PrnStr("\n\n\n\n\n\n\n\n\n\n");
 
 	// start printing
     Lib_PrnStart();
