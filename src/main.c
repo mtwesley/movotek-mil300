@@ -338,16 +338,19 @@ unsigned char Display_Waiting(int force) {
                 if (order_parse(&order)) {
                     Print_Order(&order);
                     
-                    int fid;
-                    char fname[16];
+                    // int fid;
+                    // char fname[16];
+                    // unsigned char buf[4000];
 
-                    // open file for status
-                    memset(fname, 0, sizeof(fname));
-                    sprintf(fname, "Order_%s", order.status);
-                    if (Lib_FileExist(fname) != FILE_NOTEXIST) Lib_FileRemove(fname);                    
-                    fid = Lib_FileOpen(fname, O_CREATE);
-                    Lib_FileSeek(fid, 0, FILE_SEEK_SET);
-                    Lib_FileWrite(fid, (BYTE *)order->bencode, strlen(order->bencode));
+                    // // open file for status
+                    // memset(fname, 0, sizeof(fname));
+                    // sprintf(fname, "orders_", order.status);
+                    // if (Lib_FileExist(fname) != FILE_NOTEXIST) Lib_FileRemove(fname);                    
+                    // fid = Lib_FileOpen(fname, O_CREATE);
+                    // sprintf(buf, "%c,%i,%s\n", order.type, order.number, order.bencode)
+                    // Lib_FileSeek(fid, 0, FILE_SEEK_END);
+                    // Lib_FileWrite(fid, (BYTE *))
+                    // Lib_FileWrite(fid, (BYTE *)order->bencode, strlen(order->bencode));
 
                     // scroll through status files to check for order
                     // memset(fname, 0, sizeof(fname));
@@ -705,8 +708,8 @@ int Print_Order(order_t *order) {
     // discount
     memset(text_short, 0, sizeof(text_short));
     memset(large_line, 0, sizeof(large_line));
-    if (order_get_fee(order, text_short) && strlen(text_short) && (strcmp(text_short, "0"))) {
-        sprintf(large_line, "Fees %27.27s\n", text_short);
+    if (order_get_discount(order, text_short) && strlen(text_short) && (strcmp(text_short, "0"))) {
+        sprintf(large_line, "Discount %22.22s\n", text_short);
         Lib_PrnStr("--------------------------------\n");
         Lib_PrnStr(large_line);
     }
@@ -760,7 +763,7 @@ int Print_Order(order_t *order) {
 
     Lib_PrnStr("\n\n\n\n\n");
     Lib_PrnStr("  * * * www.cookshop.biz * * *  \n");
-    Lib_PrnStr("\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+    Lib_PrnStr("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
 
 	// start printing
     Lib_PrnStart();

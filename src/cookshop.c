@@ -53,7 +53,7 @@ int sms_get_msg(unsigned char *msg, int *msg_len, int max_len) {
                 for (i = 0; i < 8; i++) new_datetime[i] = bin_ts(datetime[i]);
 
                 int diff = datetime_to_epoch(new_datetime) - datetime_to_epoch(sms.timestamp);
-                if (diff > 3600) {
+                if (diff > (60 * SMS_MESSAGE_MINUTES)) {
                     sprintf(cmd, "AT+CMGD=%d,0\r", msg_id);
                     Wls_ExecuteCmd(cmd, strlen(cmd), buf, SMS_BUFFER_LENGTH, &len, 1000);
                     multipart_ref = 0;
