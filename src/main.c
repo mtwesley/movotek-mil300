@@ -763,11 +763,7 @@ int Print_Order(order_t *order) {
 
     Lib_PrnStr("\n\n\n");
     Lib_PrnStr("  * * * www.cookshop.biz * * *  \n");
-<<<<<<< HEAD
     Lib_PrnStr("\n\n\n\n\n\n\n\n\n\n");
-=======
-    Lib_PrnStr("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
->>>>>>> d4f111e35cdefad641b9b7ef6bb10c85de490287
 
 	// start printing
     Lib_PrnStart();
