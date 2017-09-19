@@ -347,7 +347,7 @@ unsigned char Display_Waiting(int force) {
                     if (Lib_FileExist(fname) != FILE_NOTEXIST) Lib_FileRemove(fname);                    
                     fid = Lib_FileOpen(fname, O_CREATE);
                     Lib_FileSeek(fid, 0, FILE_SEEK_SET);
-                    Lib_FileWrite(fid, (BYTE *)order->bencode, strlen(order->bencode));
+                    Lib_FileWrite(fid, order.bencode, strlen(order.bencode));
 
                     // scroll through status files to check for order
                     // memset(fname, 0, sizeof(fname));
@@ -758,9 +758,9 @@ int Print_Order(order_t *order) {
         Lib_PrnStr(large_line);        
     }
 
-    Lib_PrnStr("\n\n\n\n\n");
+    Lib_PrnStr("\n\n\n");
     Lib_PrnStr("  * * * www.cookshop.biz * * *  \n");
-    Lib_PrnStr("\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+    Lib_PrnStr("\n\n\n\n\n\n\n\n\n\n");
 
 	// start printing
     Lib_PrnStart();
