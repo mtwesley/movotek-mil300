@@ -17,7 +17,7 @@ char* strrstr(char *haystack, char *needle, int length) {
 	return r;
 }
 
-voint wraplines(char *text, int len) {
+void wraplines(char *text, int len) {
 	char buf[len];
 	char *start, *end;
 
