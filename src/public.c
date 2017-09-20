@@ -13,8 +13,27 @@ char* strrstr(char *haystack, char *needle, int length) {
 		if (!p) return r;
 		r = p;
 		haystack = p + 1;
-	} while (length == NULL || (int)(p - o) < length);
+	} while ((int)(p - o) < length);
 	return r;
+}
+
+voint wraplines(char *text, int len) {
+	char buf[len];
+	char *start, *end;
+
+	start = end = text;
+	do {	
+		memset(buf, 0, sizeof(buf));
+		while (start[0] == ' ') { start++; end++; continue; }
+		if (strlen(start) < len) end = start + strlen(start);
+		if (end == start) end = strrstr(start, "\n", len);
+		if (end == start) end = strrstr(start, " ", len);
+		if (end == start) end = start + len;
+		
+		strncpy(buf, start, (end - start));
+		printf("%s\n", buf);
+		start = ++end;
+	} while (start < text + strlen(text));
 }
 
 unsigned int bin_ts(int x) {
