@@ -772,9 +772,8 @@ int Print_Order(order_t *order) {
 }
 
 int main(void) {
-    unsigned char *env_value;
     unsigned char list_value;
-    unsigned char list_env_value[2] = "\0";
+    unsigned char list_env_value[2];
 
 	Lib_AppInit();
  
@@ -808,8 +807,10 @@ int main(void) {
 	Lib_DelayMs(0);
 
     // initialize wireless
-    Wls_SelectSim((int)list_env_value[0]);
     Wls_Reset();
+    memset(list_env_value, 0, sizeof(list_env_value));
+    Lib_FileGetEnv("SIMNO", list_env_value);
+    Wls_SelectSim((int)list_env_value[0]);
     Wls_Init();
 
     // PDU mode
@@ -849,6 +850,8 @@ int main(void) {
         Lib_LcdClrDotBuf();
         Lib_KbFlush();
         Refresh_Settings();
+
+        memset(list_env_value, 0, sizeof(list_env_value));
 
         // display content using views
 		if (view == VIEW_WAITING) {
@@ -1135,11 +1138,11 @@ int main(void) {
                             break;
 
                         default:
+                            Display_Notice("Resetting network\nsettings.");
+                            Wls_Reset();
                             list_env_value[0] = list_value;
                             Lib_FilePutEnv("SIMNO", list_env_value);
                             Wls_SelectSim((int)list_env_value[0]);
-                            Display_Notice("Resetting network\nsettings.");
-                            Wls_Reset();
                             view = VIEW_SETTINGS_NETWORK;
                     }
                     break;
