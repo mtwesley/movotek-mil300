@@ -2,18 +2,18 @@
 
 #define NULL 0
 
-char* strrstr(char *haystack, char *needle, int length) {
-	char *r, *p, *o;
-	r = p = o = haystack;
+int strrstr(char *in, char *needle, char *out, int length) {
+	char *p, *o;
+	out = p = o = in;
 
-	if (!needle[0]) return (char*)haystack + strlen(haystack);
+	if (!needle[0]) out = (char*)in + strlen(in);
 	do {
-		p = strstr(haystack, needle);
-		if (!p) return r;
-		r = p;
-		haystack = p + 1;
+		p = strstr(in, needle);
+		if (!p) return 0;
+		out = p;
+		in = p + 1;
 	} while ((int)(p - o) < length);
-	return r;
+	return 0;
 }
 
 void wraplines(char *text, int len) {
@@ -25,8 +25,8 @@ void wraplines(char *text, int len) {
 		memset(buf, 0, sizeof(buf));
 		while (start[0] == ' ') { start++; end++; continue; }
 		if (strlen(start) < len) end = start + strlen(start);
-		if (end == start) end = strrstr(start, "\n", len);
-		if (end == start) end = strrstr(start, " ", len);
+		if (end == start) strrstr(start, "\n", end, len);
+		if (end == start) strrstr(start, " ", end, len);
 		if (end == start) end = start + len;
 		
 		strncpy(buf, start, (end - start));

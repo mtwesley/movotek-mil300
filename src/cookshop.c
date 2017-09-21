@@ -10,11 +10,14 @@
 #include "bencode.h"
 #include "sms_pdu.h"
 
-int remove_order_number(char *number, char *in, char *out) {
-	char *p;   
+int remove_order_number(unsigned long int number, char *in, char *out) {
+    char n[8];
+	char *p;
+
+    sprintf(n, "%d", number); 
 	p = strtok(in, ",");
 	while (p != NULL) {
-		if (strcmp(p, number)) {
+		if (strcmp(p, n)) {
 			if (p > in) strcat(out, ",");
 			strcat(out, p);
 		}
@@ -23,16 +26,21 @@ int remove_order_number(char *number, char *in, char *out) {
     return 0;
 }
 
-int add_order_number(char *number, char *in, char *out) {
-    char *p;
-    if (!strstr(in, number)) {
-        if (strlen(in)) strcat(out, ",");
-        strcat(out, number);
+int add_order_number(unsigned long int number, char *in) {
+    char n[8];
+	char *p;
+
+    sprintf(n, "%d", number); 
+    if (!strstr(in, n)) {
+        if (strlen(in)) strcat(in, ",");
+        strcat(in, n);
     }
     return 0;
 }
 
 int has_order_number(char *number, char *in) {
+    char n[8];
+    sprintf(n, "%d", number); 
     if (strstr(in, number)) return 1;
     return 0;
 }
@@ -71,7 +79,7 @@ int sms_get_msg(unsigned char *msg, int *msg_len, int max_len) {
 
     memset(buf, 0, SMS_BUFFER_LENGTH);
     strcpy(cmd, "AT+CMGL=4\r");
-    if ((Wls_ExecuteCmd(cmd, strlen(cmd), buf, SMS_BUFFER_LENGTH, &len, 3000) == WLS_OK) && strlen(buf)) {
+    if ((Wls_ExecuteCmd(cmd, strlen(cmd), buf, SMS_BUFFER_LENGTH, &len, 2000) == WLS_OK) && strlen(buf)) {
         tmp = buf;
         while (rsp = strstr(tmp, "+CMGL: ")) {
             pdu = strstr(rsp, "\r\n") + 2;
@@ -87,6 +95,16 @@ int sms_get_msg(unsigned char *msg, int *msg_len, int max_len) {
                 Lib_GetDateTime(datetime);
 
                 for (i = 0; i < 8; i++) new_datetime[i] = bin_ts(datetime[i]);
+
+                // char notice[500];
+                // memset(notice, 0, sizeof(notice));
+                // sprintf(notice, "%s (%x, %i, %i, %i, %i, %i): %s", 
+                //         sms.telnum, sms.message_type, sms.message_length, sms.message_number, sms.message_parts, 
+                //         sms.message_reference, msg_id, sms.message);
+                // Lib_PrnInit();
+                // Lib_PrnStr(notice);
+                // Lib_PrnStr("\n\n");
+                // Lib_PrnStart();
 
                 int diff = datetime_to_epoch(new_datetime) - datetime_to_epoch(sms.timestamp);
                 if (diff > (60 * SMS_MESSAGE_MINUTES)) {
@@ -136,6 +154,12 @@ int sms_get_msg(unsigned char *msg, int *msg_len, int max_len) {
             }
         }
 
+        // Lib_PrnInit();
+        // Lib_PrnStr(buf);
+        // Lib_PrnStr("\n\n");
+        // Lib_PrnStart();
+        // Lib_DelayMs(5000);
+
         *msg_len = strlen(msg);
     }
     return 0;
@@ -182,14 +206,13 @@ int order_save(order_t *order) {
     else strcpy(envname, "ORDERS_PENDING");
     
     memset(envval, 0, sizeof(envval));
-    memset(envval, 0, sizeof(envtmp));                    
-    Lib_FileGetEnv(envname, envtmp);
-    add_order_number(order->number, envtmp, envval);
+    Lib_FileGetEnv(envname, envval);
+    add_order_number(order->number, envval);
     Lib_FilePutEnv(envname, envval);
     
     // write order to a file
-    memset(fname, 0, sizeof(fname));                    
-    sprintf(fname, "ORDERS_", order->status); break;
+    memset(fname, 0, sizeof(fname));
+    sprintf(fname, "ORDERS_%i", order->number);
 
     if (Lib_FileExist(fname) != FILE_NOTEXIST) Lib_FileRemove(fname);
     fid = Lib_FileOpen(fname, O_CREATE);

@@ -112,63 +112,63 @@ char *Settings_Printer_Menu[] = {
     NULL
 };
 
-char *Settings_Display_Contrast_List[] = {
+char Settings_Display_Contrast_List[][24] = {
     "Very High",
     "High",
     "Medium",
     "Low",
     "Very Low",
-    NULL
+    ""
 };
 
-char *Settings_Display_Backlight_List[] = {
+char Settings_Display_Backlight_List[][24] = {
     "Always off",
     "Sometimes on",
     "Always on",
-    NULL
+    ""
 };
 
-char *Settings_Sound_Keypad_List[] = {
+char Settings_Sound_Keypad_List[][24] = {
     "Mute",
     "Unmute",
-    NULL
+    ""
 };
 
-char *Settings_Sound_Ringtone_List[] = {
+char Settings_Sound_Ringtone_List[][24] = {
     "Ringtone #1",
     "Ringtone #2",
     "Ringtone #3",
     "Ringtone #4",
-    NULL
+    ""
 };
 
-char *Settings_Network_Sim_List[] = {
+char Settings_Network_Sim_List[][24] = {
     "SIM 1",
     "SIM 2",
-    NULL
+    ""
 };
 
-char *Settings_Printer_Speed_List[] = {
+char Settings_Printer_Speed_List[][24] = {
     "Fast",
     "Slow",
-    NULL
+    ""
 };
 
-char *Settings_Printer_Contrast_List[] = {
+char Settings_Printer_Contrast_List[][24] = {
     "Very High",
     "High",
     "Medium",
     "Low",
     "Very Low",
-    NULL
+    ""
 };
-char *Sample_Order_List[] = {
+char Sample_Order_List[][24] = {
     "CS146001",
     "CS146002",
     "CS146003",
     "CS146004",
     "CS146005",
-    NULL
+    ""
 };
 
 static int view     = VIEW_WAITING;
@@ -332,7 +332,7 @@ unsigned char Display_Waiting(int force) {
 
             // annoying beep if new orders
             Lib_FileGetEnv("ORDERS_NEW", envvar);
-            if (beep_now && count_order_numbers(envar)) {
+            if (beep_now && count_order_numbers(envvar)) {
                 Beep_Cookshop();
                 beep_now = FALSE;
             } else beep_now = TRUE;
@@ -347,7 +347,7 @@ unsigned char Display_Waiting(int force) {
                 strcpy(order.bencode, msg);
                 
                 if (order_parse(&order)) {
-                    // Print_Order(&order);
+                    Print_Order(&order);
                     order_save(&order);                    
                 }
             }
@@ -364,6 +364,8 @@ unsigned char Display_Waiting(int force) {
                 case KEYENTER:
                 case KEYOK:
                     Lib_SetTimer(TIMER_WAITING, TIMER_30SEC);
+                    Clear_Content();
+                    Display_Topbar(TRUE);
                     return ucKey;
             }
         }
@@ -430,14 +432,14 @@ unsigned char View_Menu(char **menu) {
 	return 1;
 }
 
-int View_List(char **list, int scroll) {
+int View_List(char list[][24], int scroll) {
     int len = 0;
     // int scroll = 0;
     int lines = 4;
     unsigned char ucKey;
 
     // list length
-    while (list[len++] != NULL); len--;	
+    while (list[len++] != ""); len--;	
 
     if (scroll < 0 || len < scroll) scroll = 0;
 
@@ -447,14 +449,14 @@ int View_List(char **list, int scroll) {
     // scrolling
     while (len) {
         int count = 0;
-        char** temp = (list + ((scroll / lines) * lines));
+        int k = (scroll / lines) * lines;
 
         Clear_Content();
         Lib_LcdGotoxy(0, 14);
         
-        while (*temp != NULL && count < lines) {
-            if (count == (scroll % lines)) Lib_Lcdprintf("[*] %s\n", *temp++);
-            else Lib_Lcdprintf("[ ] %s\n", *temp++);
+        while (list[k] != "" && count < lines) {
+            if (count == (scroll % lines)) Lib_Lcdprintf("[*] %s\n", list[k++]);
+            else Lib_Lcdprintf("[ ] %s\n", list[k++]);
             count++;
         }
 
@@ -564,7 +566,7 @@ int Display_Notice(char *message) {
     Lib_KbFlush();
     while (TRUE) {
         Display_Topbar(FALSE);
-        // if (Display_Waiting(FALSE)) break;
+        if (Display_Waiting(FALSE)) break;
 
         if (Lib_KbCheck()) continue;
         ucKey = Lib_KbGetCh();
@@ -583,7 +585,7 @@ int Display_Notice(char *message) {
 }
 
 int Print_Wrapped_Line(char *text, int len) {
-    char buf[len];
+    char buf[50];
     char *start, *end;
 
     start = end = text;
@@ -591,8 +593,8 @@ int Print_Wrapped_Line(char *text, int len) {
         memset(buf, 0, sizeof(buf));
         while (start[0] == ' ') { start++; end++; continue; }
         if (strlen(start) < len) end = start + strlen(start);
-        if (end == start) end = strrstr(start, "\n", len);
-        if (end == start) end = strrstr(start, " ", len);
+        if (end == start) strrstr(start, "\n", end, len);
+        if (end == start) strrstr(start, " ", end, len);
         if (end == start) end = start + len;
         
         strncpy(buf, start, (end - start));
@@ -727,6 +729,15 @@ int Print_Order(order_t *order) {
         Lib_PrnStr(large_line);
     }
 
+    // extra
+    memset(text_short, 0, sizeof(text_short));
+    memset(large_line, 0, sizeof(large_line));
+    if (order_get_extra(order, text_short) && strlen(text_short) && (strcmp(text_short, "0"))) {
+        sprintf(large_line, "Tips %27.27s\n", text_short);
+        Lib_PrnStr("--------------------------------\n");
+        Lib_PrnStr(large_line);
+    }
+
     // // total
     memset(text_short, 0, sizeof(text_short));
     memset(large_line, 0, sizeof(large_line));
@@ -810,8 +821,8 @@ int main(void) {
 	Lib_DelayMs(1500);
 
     // reset communication ports
-    // Lib_ComReset(COM1);
-    // Lib_ComReset(COM2);
+    Lib_ComReset(COM1);
+    Lib_ComReset(COM2);
     Lib_ComReset(AT_COM);
     // Lib_UsbReset(); // FIXME: find the port number for USB
 
@@ -826,12 +837,12 @@ int main(void) {
     Wls_Init();
 
     // setup order files
-    unsigned char *env_var[120];
-    memset(env_var, 0, sizeof(env_var));
-    if (Lib_FileGetEnv("ORDERS_NEW")) Lib_FilePutEnv("ORDERS_NEW", env_var);
-    if (Lib_FileGetEnv("ORDERS_PENDING")) Lib_FilePutEnv("ORDERS_PENDING", env_var);
-    if (Lib_FileGetEnv("ORDERS_PICKUP")) Lib_FilePutEnv("ORDERS_PICKUP", env_var);
-    if (Lib_FileGetEnv("ORDERS_DELIVERY")) Lib_FilePutEnv("ORDERS_DELIVERY", env_var);
+    unsigned char envvar[120];
+    memset(envvar, 0, sizeof(envvar));
+    if (Lib_FileGetEnv("ORDERS_NEW", envvar)) Lib_FilePutEnv("ORDERS_NEW", envvar);
+    if (Lib_FileGetEnv("ORDERS_PENDING", envvar)) Lib_FilePutEnv("ORDERS_PENDING", envvar);
+    if (Lib_FileGetEnv("ORDERS_PICKUP", envvar)) Lib_FilePutEnv("ORDERS_PICKUP", envvar);
+    if (Lib_FileGetEnv("ORDERS_DELIVERY", envvar)) Lib_FilePutEnv("ORDERS_DELIVERY", envvar);
     
     // PDU mode
     // Wls_SendCmdRequest("AT+CMGF=0\r", 10);
@@ -933,16 +944,18 @@ int main(void) {
                 Lib_FileGetEnv("ORDERS_DELIVERY", envval);
             }
 
+            memset(order_list, 0, sizeof(order_list));
             if (strlen(envval)) {
                 // place orders in list
                 i = 0; 
                 p = strtok(envval, ",");
                 while (p != NULL) {
-                    memset(order_list[i++], sizeof(order_list[i++]));
-                    strcat(order_list[i++], "CS");
-                    strcat(order_list[i++], p);
+                    strcat(order_list[i], "CS");
+                    strcat(order_list[i], p);
                     p = strtok(NULL, ",");
+                    i++;
                 }
+                strcat(order_list[i], "");
 
                 switch (View_List(order_list, 0)) {
                     case KEYCANCEL:
