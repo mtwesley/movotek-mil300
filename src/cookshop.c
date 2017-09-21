@@ -10,6 +10,42 @@
 #include "bencode.h"
 #include "sms_pdu.h"
 
+int remove_order_number(char *number, char *in, char *out) {
+	char *p;   
+	p = strtok(in, ",");
+	while (p != NULL) {
+		if (strcmp(p, number)) {
+			if (p > in) strcat(out, ",");
+			strcat(out, p);
+		}
+		p = strtok(NULL, ",");
+    }
+    return 0;
+}
+
+int add_order_number(char *number, char *in, char *out) {
+    char *p;
+    if (!strstr(in, number)) {
+        if (strlen(in)) strcat(out, ",");
+        strcat(out, number);
+    }
+    return 0;
+}
+
+int has_order_number(char *number, char *in) {
+    if (strstr(in, number)) return 1;
+    return 0;
+}
+
+int count_order_numbers(char *in) {
+    int i = 0;
+    if (strlen(in)) {
+        for (i = 0; in[i]; in[i]==',' ? i++ : *in++); 
+        i++;
+    }
+    return i;
+}
+
 int sms_get_msg(unsigned char *msg, int *msg_len, int max_len) {
     int i, j;
     sms_t sms;
@@ -103,6 +139,63 @@ int sms_get_msg(unsigned char *msg, int *msg_len, int max_len) {
         *msg_len = strlen(msg);
     }
     return 0;
+}
+
+int order_save(order_t *order) {
+    int fid;
+    char fname[16];
+    char envname[20];
+    unsigned char envtmp[120];
+    unsigned char envval[120];
+    unsigned char buf[4000];
+
+    // remove order from all statuses
+    memset(envval, 0, sizeof(envval));
+    memset(envval, 0, sizeof(envtmp));                    
+    Lib_FileGetEnv("ORDER_NEW", envtmp);
+    remove_order_number(order->number, envtmp, envval);
+    Lib_FilePutEnv("ORDER_NEW", envval);
+    
+    memset(envval, 0, sizeof(envval));
+    memset(envval, 0, sizeof(envtmp));                    
+    Lib_FileGetEnv("ORDERS_PENDING", envtmp);
+    remove_order_number(order->number, envtmp, envval);
+    Lib_FilePutEnv("ORDERS_PENDING", envval);
+    
+    memset(envval, 0, sizeof(envval));
+    memset(envval, 0, sizeof(envtmp));                    
+    Lib_FileGetEnv("ORDERS_PICKUP", envtmp);
+    remove_order_number(order->number, envtmp, envval);
+    Lib_FilePutEnv("ORDERS_PICKUP", envval);
+    
+    memset(envval, 0, sizeof(envval));
+    memset(envval, 0, sizeof(envtmp));                    
+    Lib_FileGetEnv("ORDERS_DELIVERY", envtmp);
+    remove_order_number(order->number, envtmp, envval);
+    Lib_FilePutEnv("ORDERS_DELIVERY", envval);
+    
+    // add order to correct status
+    memset(envname, 0, sizeof(envname));
+    if (order->status == 'P') strcpy(envname, "ORDERS_NEW"); 
+    else if (order->status == 'C' && order->type == 'P') strcpy(envname, "ORDERS_PICKUP");
+    else if (order->status == 'C' && order->type == 'D') strcpy(envname, "ORDERS_DELIVERY");
+    else strcpy(envname, "ORDERS_PENDING");
+    
+    memset(envval, 0, sizeof(envval));
+    memset(envval, 0, sizeof(envtmp));                    
+    Lib_FileGetEnv(envname, envtmp);
+    add_order_number(order->number, envtmp, envval);
+    Lib_FilePutEnv(envname, envval);
+    
+    // write order to a file
+    memset(fname, 0, sizeof(fname));                    
+    sprintf(fname, "ORDERS_", order->status); break;
+
+    if (Lib_FileExist(fname) != FILE_NOTEXIST) Lib_FileRemove(fname);
+    fid = Lib_FileOpen(fname, O_CREATE);
+
+    Lib_FileSeek(fid, 0, FILE_SEEK_SET);
+    Lib_FileWrite(fid, (BYTE *)order->bencode, strlen(order->bencode));
 }
 
 int order_parse(order_t *order) {

@@ -174,6 +174,11 @@ char *Sample_Order_List[] = {
 static int view     = VIEW_WAITING;
 static int status   = STATUS_UNKNOWN;
 
+void Beep_Cookshop() {
+    Lib_Beef(6, 300);
+    Lib_Beef(3, 300);    
+}
+
 void Refresh_Settings(void) {
     unsigned char value[2] = "\0";
 
@@ -319,16 +324,22 @@ unsigned char Display_Waiting(int force) {
         // wait for OK, ESC, CANCEL, or MENU
         Lib_KbFlush();
 
+        int beep_now = TRUE;
         while (TRUE) {
             unsigned char msg[SMS_MESSAGE_LENGTH];
+            char envvar[120];
             int msg_len;
+
+            // annoying beep if new orders
+            Lib_FileGetEnv("ORDERS_NEW", envvar);
+            if (beep_now && count_order_numbers(envar)) {
+                Beep_Cookshop();
+                beep_now = FALSE;
+            } else beep_now = TRUE;
 
             memset(msg, 0, sizeof(msg));
             sms_get_msg(&msg, &msg_len, SMS_MESSAGE_LENGTH);
             
-            // char *test_bencode = "d6:ordersld8:cash_due5:37.008:currency3:USD10:directions66:Sinkor 10th st.-sea side-Payne avenue-Fayad building-Appartment #68:discount1:03:due5:37.005:extra1:03:fee1:02:idi15385e12:instructions0:5:itemsld4:code0:4:cost4:4.008:currency3:USD2:idi861e6:margin4:0.004:name10:Coke (Can)5:price4:2.008:quantityi2e10:restaurantd4:code3:DRK2:idi16e4:name6:Drinkse13:restaurant_idi16e3:tax1:05:total4:4.00ed4:code0:4:cost4:7.008:currency3:USD2:idi3903e6:margin4:0.004:name23:Ura Maki Atlantic Green5:price4:7.008:quantityi1e10:restaurantd4:code3:BSB2:idi203e4:name29:Barracuda Seafood & Sushi Bare13:restaurant_idi203e3:tax1:05:total4:7.00ed4:code0:4:cost4:6.008:currency3:USD2:idi3949e6:margin4:0.004:name24:Temaki Crispy Spicy Tuna5:price4:6.008:quantityi1e10:restaurantd4:code3:BSB2:idi203e4:name29:Barracuda Seafood & Sushi Bare13:restaurant_idi203e3:tax1:05:total4:6.00ed4:code0:4:cost5:20.008:currency3:USD2:idi3988e6:margin4:0.004:name12:Crab Platter5:price5:20.008:quantityi1e10:restaurantd4:code3:BSB2:idi203e4:name29:Barracuda Seafood & Sushi Bare13:restaurant_idi203e3:tax1:05:total5:20.00ee8:locationd4:code3:SKR2:idi4e4:name6:Sinkore11:location_idi4e6:numberi115385e4:owed1:04:paid1:06:status1:C9:timestampi1468003305e5:total5:37.004:type1:D4:userd5:email16:i.15@hotmail.com2:idi1205e4:name9:Ali Fayad5:phone10:0776773333e7:user_idi1205eeee";
-            // strcpy(msg, test_bencode);
-
             if (strlen(msg)) {
                 order_t order;
 
@@ -336,26 +347,8 @@ unsigned char Display_Waiting(int force) {
                 strcpy(order.bencode, msg);
                 
                 if (order_parse(&order)) {
-                    Print_Order(&order);
-                    
-                    // int fid;
-                    // char fname[16];
-                    // unsigned char buf[4000];
-
-                    // // open file for status
-                    // memset(fname, 0, sizeof(fname));
-                    // sprintf(fname, "orders_", order.status);
-                    // if (Lib_FileExist(fname) != FILE_NOTEXIST) Lib_FileRemove(fname);                    
-                    // fid = Lib_FileOpen(fname, O_CREATE);
-                    // sprintf(buf, "%c,%i,%s\n", order.type, order.number, order.bencode)
-                    // Lib_FileSeek(fid, 0, FILE_SEEK_END);
-                    // Lib_FileWrite(fid, (BYTE *))
-                    // Lib_FileWrite(fid, (BYTE *)order.bencode, strlen(order->bencode));
-
-                    // scroll through status files to check for order
-                    // memset(fname, 0, sizeof(fname));
-                    // sprintf(fname, "Order_%s", order.status);
-                    
+                    // Print_Order(&order);
+                    order_save(&order);                    
                 }
             }
             
@@ -589,6 +582,26 @@ int Display_Notice(char *message) {
     }
 }
 
+int Print_Wrapped_Line(char *text, int len) {
+    char buf[len];
+    char *start, *end;
+
+    start = end = text;
+    do {	
+        memset(buf, 0, sizeof(buf));
+        while (start[0] == ' ') { start++; end++; continue; }
+        if (strlen(start) < len) end = start + strlen(start);
+        if (end == start) end = strrstr(start, "\n", len);
+        if (end == start) end = strrstr(start, " ", len);
+        if (end == start) end = start + len;
+        
+        strncpy(buf, start, (end - start));
+        Lib_PrnStr(buf);
+        Lib_PrnStr("\n");
+        start = ++end;
+    } while (start < text + strlen(text));
+}
+
 int Print_Order(order_t *order) {
     int i;
     unsigned long int integer;
@@ -641,12 +654,12 @@ int Print_Order(order_t *order) {
         Lib_PrnStr("\n\n");
 
         memset(large_line, 0, sizeof(large_line));
-        sprintf(large_line, "%*s\n", center_padding(32, strlen(text_medium)), text_medium);
+        sprintf(large_line, "%*.32s\n", center_padding(32, strlen(text_medium)), text_medium);
         Lib_PrnStr(large_line);        
         
         if (strlen(text_long)) {
             memset(large_line, 0, sizeof(large_line));
-            sprintf(large_line, "%*s\n", center_padding(32, strlen(text_long)), text_long);
+            sprintf(large_line, "%*.32s\n", center_padding(32, strlen(text_long)), text_long);
             Lib_PrnStr(large_line); 
         }       
         
@@ -670,7 +683,7 @@ int Print_Order(order_t *order) {
                 // item name
                 memset(large_line, 0, sizeof(large_line));
                 sprintf(large_line, "%s\n", text_medium);
-                Lib_PrnStr(large_line);  
+                Print_Wrapped_Line(large_line, 32);  
 
                 // restaurant name
                 memset(text_short, 0, sizeof(text_short));
@@ -680,7 +693,7 @@ int Print_Order(order_t *order) {
                     Lib_PrnSetFont(PRN_FONT_MEDIUM);
                     memset(medium_line, 0, sizeof(medium_line));
                     sprintf(medium_line, "%s\n", text_medium);
-                    Lib_PrnStr(medium_line);
+                    Print_Wrapped_Line(medium_line, 48);
                     Lib_PrnSetFont(PRN_FONT_LARGE);
                 }
 
@@ -750,7 +763,7 @@ int Print_Order(order_t *order) {
     if (order_get_directions(order, text_long) && strlen(text_long)) {
         Lib_PrnStr("\n\n");
         sprintf(large_line, "Delivery Instructions: %s\n", text_long);
-        Lib_PrnStr(large_line);        
+        Print_Wrapped_Line(large_line, 32);        
     }
 
     // special instructions
@@ -758,7 +771,7 @@ int Print_Order(order_t *order) {
     if (order_get_instructions(order, text_long) && strlen(text_long)) {
         Lib_PrnStr("\n\n");
         sprintf(large_line, "Special Instructions: %s\n", text_long);
-        Lib_PrnStr(large_line);        
+        Print_Wrapped_Line(large_line, 32);        
     }
 
     Lib_PrnStr("\n\n\n");
@@ -784,9 +797,8 @@ int main(void) {
 
     // Loading
  	Display_Loading(-1);
- 	Lib_DelayMs(500);
-    Lib_Beef(6, 300);
-    Lib_Beef(3, 300);
+    Lib_DelayMs(500);
+    Beep_Cookshop(); 
 
  	Display_Loading(0);
 	Lib_DelayMs(1500);
@@ -798,8 +810,8 @@ int main(void) {
 	Lib_DelayMs(1500);
 
     // reset communication ports
-    Lib_ComReset(COM1);
-    Lib_ComReset(COM2);
+    // Lib_ComReset(COM1);
+    // Lib_ComReset(COM2);
     Lib_ComReset(AT_COM);
     // Lib_UsbReset(); // FIXME: find the port number for USB
 
@@ -813,6 +825,14 @@ int main(void) {
     Wls_SelectSim((int)list_env_value[0]);
     Wls_Init();
 
+    // setup order files
+    unsigned char *env_var[120];
+    memset(env_var, 0, sizeof(env_var));
+    if (Lib_FileGetEnv("ORDERS_NEW")) Lib_FilePutEnv("ORDERS_NEW", env_var);
+    if (Lib_FileGetEnv("ORDERS_PENDING")) Lib_FilePutEnv("ORDERS_PENDING", env_var);
+    if (Lib_FileGetEnv("ORDERS_PICKUP")) Lib_FilePutEnv("ORDERS_PICKUP", env_var);
+    if (Lib_FileGetEnv("ORDERS_DELIVERY")) Lib_FilePutEnv("ORDERS_DELIVERY", env_var);
+    
     // PDU mode
     // Wls_SendCmdRequest("AT+CMGF=0\r", 10);
 
@@ -891,24 +911,53 @@ int main(void) {
 			}
 
 		} else if (view == VIEW_ORDER_LIST) {
-			if (status == STATUS_NEW) 		     title = "New orders";
-			else if (status == STATUS_PENDING)   title = "Pending orders";
-			else if (status == STATUS_PICKED_UP) title = "Picked-up";
-			else if (status == STATUS_DELIVERED) title = "Delivered";
+            int i;
+            char *p;
+            char envval[120];
+            char order_list[20][24];
 
-			switch (View_List(Sample_Order_List, 0)) {
-				case KEYCANCEL:
-                case KEYMENU:
-                    view = VIEW_MAIN;
-                    break;
+            if (status == STATUS_NEW) {
+                title = "New orders";
+                Lib_FileGetEnv("ORDERS_NEW", envval);
+            }
+			else if (status == STATUS_PENDING) {
+                title = "Pending orders";
+                Lib_FileGetEnv("ORDERS_PENDING", envval);
+            }
+			else if (status == STATUS_PICKED_UP) {
+                title = "Picked-up";
+                Lib_FileGetEnv("ORDERS_PICKUP", envval);
+            }
+			else if (status == STATUS_DELIVERED) {
+                title = "Delivered";
+                Lib_FileGetEnv("ORDERS_DELIVERY", envval);
+            }
 
-				default:
-					// FIXME: first check if it is a number and there exists
-					// an order with that number
+            if (strlen(envval)) {
+                // place orders in list
+                i = 0; 
+                p = strtok(envval, ",");
+                while (p != NULL) {
+                    memset(order_list[i++], sizeof(order_list[i++]));
+                    strcat(order_list[i++], "CS");
+                    strcat(order_list[i++], p);
+                    p = strtok(NULL, ",");
+                }
 
-					// order = (int) ucKey;
-					view = VIEW_ORDER;
-			}
+                switch (View_List(order_list, 0)) {
+                    case KEYCANCEL:
+                    case KEYMENU:
+                        view = VIEW_MAIN;
+                        break;
+
+                    default:
+                        // FIXME: first check if it is a number and there exists
+                        // an order with that number
+
+                        // order = (int) ucKey;
+                        view = VIEW_ORDER;
+                }
+            } else view = VIEW_MAIN;
 
 		} else if (view == VIEW_ORDER) {
 			title = "Order CS146001";			

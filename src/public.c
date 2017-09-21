@@ -3,9 +3,8 @@
 #define NULL 0
 
 char* strrstr(char *haystack, char *needle, int length) {
-	char *r = NULL;
-	char *p = NULL;
-	char *o = haystack;
+	char *r, *p, *o;
+	r = p = o = haystack;
 
 	if (!needle[0]) return (char*)haystack + strlen(haystack);
 	do {
