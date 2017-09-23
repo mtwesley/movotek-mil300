@@ -112,63 +112,63 @@ char *Settings_Printer_Menu[] = {
     NULL
 };
 
-char Settings_Display_Contrast_List[][24] = {
+char *Settings_Display_Contrast_List[] = {
     "Very High",
     "High",
     "Medium",
     "Low",
     "Very Low",
-    ""
+    NULL
 };
 
-char Settings_Display_Backlight_List[][24] = {
+char *Settings_Display_Backlight_List[] = {
     "Always off",
     "Sometimes on",
     "Always on",
-    ""
+    NULL
 };
 
-char Settings_Sound_Keypad_List[][24] = {
+char *Settings_Sound_Keypad_List[] = {
     "Mute",
     "Unmute",
-    ""
+    NULL
 };
 
-char Settings_Sound_Ringtone_List[][24] = {
+char *Settings_Sound_Ringtone_List[] = {
     "Ringtone #1",
     "Ringtone #2",
     "Ringtone #3",
     "Ringtone #4",
-    ""
+    NULL
 };
 
-char Settings_Network_Sim_List[][24] = {
+char *Settings_Network_Sim_List[] = {
     "SIM 1",
     "SIM 2",
-    ""
+    NULL
 };
 
-char Settings_Printer_Speed_List[][24] = {
+char *Settings_Printer_Speed_List[] = {
     "Fast",
     "Slow",
-    ""
+    NULL
 };
 
-char Settings_Printer_Contrast_List[][24] = {
+char *Settings_Printer_Contrast_List[] = {
     "Very High",
     "High",
     "Medium",
     "Low",
     "Very Low",
-    ""
+    NULL
 };
-char Sample_Order_List[][24] = {
+char *Sample_Order_List[] = {
     "CS146001",
     "CS146002",
     "CS146003",
     "CS146004",
     "CS146005",
-    ""
+    NULL
 };
 
 static int view     = VIEW_WAITING;
@@ -432,14 +432,14 @@ unsigned char View_Menu(char **menu) {
 	return 1;
 }
 
-int View_List(char list[][24], int scroll) {
+int View_List(char **list, int scroll) {
     int len = 0;
     // int scroll = 0;
     int lines = 4;
     unsigned char ucKey;
 
     // list length
-    while (list[len++] != ""); len--;	
+    while (list[len++] != NULL); len--;	
 
     if (scroll < 0 || len < scroll) scroll = 0;
 
@@ -449,14 +449,14 @@ int View_List(char list[][24], int scroll) {
     // scrolling
     while (len) {
         int count = 0;
-        int k = (scroll / lines) * lines;
+        char** temp = (list + ((scroll / lines) * lines));
 
         Clear_Content();
         Lib_LcdGotoxy(0, 14);
         
-        while (list[k] != "" && count < lines) {
-            if (count == (scroll % lines)) Lib_Lcdprintf("[*] %s\n", list[k++]);
-            else Lib_Lcdprintf("[ ] %s\n", list[k++]);
+        while (*temp != NULL && count < lines) {
+            if (count == (scroll % lines)) Lib_Lcdprintf("[*] %s\n", *temp++);
+            else Lib_Lcdprintf("[ ] %s\n", *temp++);
             count++;
         }
 
@@ -926,6 +926,7 @@ int main(void) {
             char *p;
             char envval[120];
             char order_list[20][24];
+            char **order_list_pp;
 
             if (status == STATUS_NEW) {
                 title = "New orders";
@@ -952,12 +953,12 @@ int main(void) {
                 while (p != NULL) {
                     strcat(order_list[i], "CS");
                     strcat(order_list[i], p);
+                    (order_list_pp + i) = &order_list[i];
                     p = strtok(NULL, ",");
                     i++;
                 }
-                strcat(order_list[i], "");
 
-                switch (View_List(order_list, 0)) {
+                switch (View_List(order_list_pp, 0)) {
                     case KEYCANCEL:
                     case KEYMENU:
                         view = VIEW_MAIN;
