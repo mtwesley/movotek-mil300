@@ -10,31 +10,52 @@
 #include "bencode.h"
 #include "sms_pdu.h"
 
-int remove_order_number(unsigned long int number, char *in, char *out) {
+int remove_order_number(unsigned long int number, char *list) {
     char n[8];
 	char *p;
 
+    unsigned char envtmp[120];
+    unsigned char envval[120];
+
+    memset(n, 0, sizeof(n));
+    memset(envtmp, 0, sizeof(envtmp));
+    memset(envval, 0, sizeof(envval));
+
+    Lib_FileGetEnv(list, envtmp);
+
     sprintf(n, "%d", number); 
-	p = strtok(in, ",");
+	p = strtok(envtmp, ",");
+
 	while (p != NULL) {
 		if (strcmp(p, n)) {
-			if (p > in) strcat(out, ",");
-			strcat(out, p);
+			if (strlen(envval)) strcat(envval, ",");
+			strcat(envval, p);
 		}
 		p = strtok(NULL, ",");
     }
+
+    Lib_FilePutEnv(list, envval);
     return 0;
 }
 
-int add_order_number(unsigned long int number, char *in) {
+int add_order_number(unsigned long int number, char *list) {
     char n[8];
 	char *p;
 
+    unsigned char envval[120];
+
+    memset(n, 0, sizeof(n));
+    memset(envval, 0, sizeof(envval));
+
+    Lib_FileGetEnv(list, envval);
+
     sprintf(n, "%d", number); 
-    if (!strstr(in, n)) {
-        if (strlen(in)) strcat(in, ",");
-        strcat(in, n);
+    if (!strstr(envval, n)) {
+        if (strlen(envval)) strcat(envval, ",");
+        strcat(envval, n);
     }
+
+    Lib_FilePutEnv(list, envval);
     return 0;
 }
 
@@ -79,7 +100,7 @@ int sms_get_msg(unsigned char *msg, int *msg_len, int max_len) {
 
     memset(buf, 0, SMS_BUFFER_LENGTH);
     strcpy(cmd, "AT+CMGL=4\r");
-    if ((Wls_ExecuteCmd(cmd, strlen(cmd), buf, SMS_BUFFER_LENGTH, &len, 2000) == WLS_OK) && strlen(buf)) {
+    if ((Wls_ExecuteCmd(cmd, strlen(cmd), buf, SMS_BUFFER_LENGTH, &len, 3000) == WLS_OK) && strlen(buf)) {
         tmp = buf;
         while (rsp = strstr(tmp, "+CMGL: ")) {
             pdu = strstr(rsp, "\r\n") + 2;
@@ -141,6 +162,7 @@ int sms_get_msg(unsigned char *msg, int *msg_len, int max_len) {
                 }
             }
             if (has_message) break;
+            Lib_DelayMs(1000);
         }
 
         if (has_message) {
@@ -174,41 +196,19 @@ int order_save(order_t *order) {
     unsigned char buf[4000];
 
     // remove order from all statuses
-    memset(envval, 0, sizeof(envval));
-    memset(envval, 0, sizeof(envtmp));                    
-    Lib_FileGetEnv("ORDER_NEW", envtmp);
-    remove_order_number(order->number, envtmp, envval);
-    Lib_FilePutEnv("ORDER_NEW", envval);
-    
-    memset(envval, 0, sizeof(envval));
-    memset(envval, 0, sizeof(envtmp));                    
-    Lib_FileGetEnv("ORDERS_PENDING", envtmp);
-    remove_order_number(order->number, envtmp, envval);
-    Lib_FilePutEnv("ORDERS_PENDING", envval);
-    
-    memset(envval, 0, sizeof(envval));
-    memset(envval, 0, sizeof(envtmp));                    
-    Lib_FileGetEnv("ORDERS_PICKUP", envtmp);
-    remove_order_number(order->number, envtmp, envval);
-    Lib_FilePutEnv("ORDERS_PICKUP", envval);
-    
-    memset(envval, 0, sizeof(envval));
-    memset(envval, 0, sizeof(envtmp));                    
-    Lib_FileGetEnv("ORDERS_DELIVERY", envtmp);
-    remove_order_number(order->number, envtmp, envval);
-    Lib_FilePutEnv("ORDERS_DELIVERY", envval);
+    remove_order_number(order->number, "NEW");
+    remove_order_number(order->number, "PENDNG");
+    remove_order_number(order->number, "PICKUP");
+    remove_order_number(order->number, "DELVRY");
     
     // add order to correct status
     memset(envname, 0, sizeof(envname));
-    if (order->status == 'P') strcpy(envname, "ORDERS_NEW"); 
-    else if (order->status == 'C' && order->type == 'P') strcpy(envname, "ORDERS_PICKUP");
-    else if (order->status == 'C' && order->type == 'D') strcpy(envname, "ORDERS_DELIVERY");
-    else strcpy(envname, "ORDERS_PENDING");
+    if (order->status == 'P') strcpy(envname, "NEW"); 
+    else if (order->status == 'C' && order->type == 'P') strcpy(envname, "PICKUP");
+    else if (order->status == 'C' && order->type == 'D') strcpy(envname, "DELVRY");
+    else strcpy(envname, "PENDNG");
     
-    memset(envval, 0, sizeof(envval));
-    Lib_FileGetEnv(envname, envval);
-    add_order_number(order->number, envval);
-    Lib_FilePutEnv(envname, envval);
+    add_order_number(order->number, envname);
     
     // write order to a file
     memset(fname, 0, sizeof(fname));

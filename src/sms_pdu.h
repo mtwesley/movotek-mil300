@@ -26,7 +26,7 @@ typedef unsigned long long uint64_t;
 /* 
 * Please refer to:
 *   http://www.dreamfabric.com/sms/type_of_address.html
-*/    
+*/
 typedef struct sms_t {
     int id;
     unsigned char message_type;

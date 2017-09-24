@@ -307,11 +307,10 @@ void Display_Topbar(int force) {
     }
 }
 
-unsigned char Display_Waiting(int force) {
+unsigned char Display_Waiting(int force, int reset) {
     unsigned char ucKey;
 
 	if (!Lib_CheckTimer(TIMER_WAITING) || force) {
-	// if (force) {
         // draw logo
         Lib_LcdCls();
         Lib_LcdGotoxy(0, 2);
@@ -332,7 +331,7 @@ unsigned char Display_Waiting(int force) {
             int msg_len;
 
             // annoying beep if new orders
-            Lib_FileGetEnv("ORDERS_NEW", envvar);
+            Lib_FileGetEnv("NEW", envvar);
             if (beep_now && count_order_numbers(envvar)) {
                 Beep_Cookshop();
                 beep_now = FALSE;
@@ -347,7 +346,7 @@ unsigned char Display_Waiting(int force) {
                 memset(order.bencode, 0, sizeof(order.bencode));
                 strcpy(order.bencode, msg);
                 
-                if (order_parse(&order)) Print_Order(&order);
+                if (order_parse(&order)) order_save(&order);
             }
             
             if (Lib_KbCheck()) continue;
@@ -368,6 +367,10 @@ unsigned char Display_Waiting(int force) {
             }
         }
     }
+    if (reset) {
+        Lib_StopTimer(TIMER_WAITING);
+        Lib_SetTimer(TIMER_WAITING, TIMER_30SEC);
+    }
     return 0;
 }
 
@@ -380,7 +383,6 @@ unsigned char View_Menu(char **menu) {
     // menu length
     while (menu[len++] != NULL); len--;
 
-    Clear_Content();
     Display_Topbar(TRUE);
 
     // scrolling
@@ -388,6 +390,7 @@ unsigned char View_Menu(char **menu) {
         int count = 0;
         char** temp = (menu + scroll);
 
+        Clear_Content();
         Lib_LcdSetFont(LCD_FONT_MEDIUM);
         Lib_LcdGotoxy(0, 14);
         
@@ -401,11 +404,13 @@ unsigned char View_Menu(char **menu) {
 			int breakout = FALSE;
 
             Display_Topbar(FALSE);
-            if (Display_Waiting(FALSE)) break;
 
-            if (Lib_KbCheck()) continue;
+            if (Lib_KbCheck()) {
+                if (Display_Waiting(FALSE, FALSE)) break;
+                else continue;
+            } else Display_Waiting(FALSE, TRUE);
+
             ucKey = Lib_KbGetCh();
-
 			switch (ucKey) {
 				case KEYDOWN:
 					if ((scroll + lines) < len) {
@@ -441,7 +446,6 @@ int View_List(char **list, int scroll) {
 
     if (scroll < 0 || len < scroll) scroll = 0;
 
-    Clear_Content();
     Display_Topbar(TRUE);
 
     // scrolling
@@ -449,6 +453,7 @@ int View_List(char **list, int scroll) {
         int count = 0;
         char** temp = (list + ((scroll / lines) * lines));
 
+        Clear_Content();
         Lib_LcdSetFont(LCD_FONT_MEDIUM);
         Lib_LcdGotoxy(0, 14);
         
@@ -463,11 +468,13 @@ int View_List(char **list, int scroll) {
 			int breakout = FALSE;
 
             Display_Topbar(FALSE);
-            if (Display_Waiting(FALSE)) break;
 
-            if (Lib_KbCheck()) continue;
+            if (Lib_KbCheck()) {
+                if (Display_Waiting(FALSE, FALSE)) break;
+                else continue;
+            } else Display_Waiting(FALSE, TRUE);
+
             ucKey = Lib_KbGetCh();
-
 			switch (ucKey) {
 				case KEYDOWN:
 					if (scroll < (len - 1)) {
@@ -524,11 +531,13 @@ int Display_Confirm(char *message, char *yes, char *no) {
         int breakout = FALSE;
 
         Display_Topbar(FALSE);
-        if (Display_Waiting(FALSE)) break;
 
-        if (Lib_KbCheck()) continue;
+        if (Lib_KbCheck()) {
+            if (Display_Waiting(FALSE, FALSE)) break;
+            else continue;
+        } else Display_Waiting(FALSE, TRUE);
+
         ucKey = Lib_KbGetCh();
-
         switch (ucKey) {
             case KEYENTER:
                 return 1;
@@ -564,7 +573,6 @@ int Display_Notice(char *message) {
     Lib_KbFlush();
     while (TRUE) {
         Display_Topbar(FALSE);
-        if (Display_Waiting(FALSE)) break;
 
         if (Lib_KbCheck()) continue;
         ucKey = Lib_KbGetCh();
@@ -614,7 +622,7 @@ int Print_Order(order_t *order) {
 
 	Lib_PrnInit();
 
-    Lib_PrnStr("\n\n\n"); // give some space
+    Lib_PrnStr("\n"); // give some space
     Lib_PrnLogo(g_Display_logo_384);
 
     Lib_PrnSetFont(PRN_FONT_LARGE);
@@ -682,8 +690,8 @@ int Print_Order(order_t *order) {
 
                 // item name
                 memset(large_line, 0, sizeof(large_line));
-                sprintf(large_line, "%s\n", text_medium);
-                Print_Wrapped_Line(large_line, 32);  
+                // sprintf(large_line, "%s\n", text_medium);
+                Print_Wrapped_Line(text_medium, 32);  
 
                 // restaurant name
                 memset(text_short, 0, sizeof(text_short));
@@ -691,9 +699,9 @@ int Print_Order(order_t *order) {
                 memset(text_long, 0, sizeof(text_long));
                 if (order_get_item_restaurant(order, i, &integer, text_medium, text_short)) {
                     Lib_PrnSetFont(PRN_FONT_MEDIUM);
-                    memset(medium_line, 0, sizeof(medium_line));
-                    sprintf(medium_line, "%s\n", text_medium);
-                    Print_Wrapped_Line(medium_line, 48);
+                    // memset(medium_line, 0, sizeof(medium_line));
+                    // sprintf(medium_line, "%s\n", text_medium);
+                    Print_Wrapped_Line(text_medium, 48);
                     Lib_PrnSetFont(PRN_FONT_LARGE);
                 }
 
@@ -771,7 +779,7 @@ int Print_Order(order_t *order) {
     memset(text_long, 0, sizeof(text_long));
     if (order_get_directions(order, text_long) && strlen(text_long)) {
         Lib_PrnStr("\n\n");
-        sprintf(large_line, "Delivery Instructions: %s\n", text_long);
+        sprintf(large_line, "Delivery Instructions: %s", text_long);
         Print_Wrapped_Line(large_line, 32);        
     }
 
@@ -779,11 +787,11 @@ int Print_Order(order_t *order) {
     memset(text_long, 0, sizeof(text_long));
     if (order_get_instructions(order, text_long) && strlen(text_long)) {
         Lib_PrnStr("\n\n");
-        sprintf(large_line, "Special Instructions: %s\n", text_long);
+        sprintf(large_line, "Special Instructions: %s", text_long);
         Print_Wrapped_Line(large_line, 32);        
     }
 
-    Lib_PrnStr("\n\n\n\n");
+    Lib_PrnStr("\n\n\n");
     Lib_PrnStr("  * * * www.cookshop.biz * * *  \n");
     Lib_PrnStr("\n\n\n\n\n\n\n\n\n\n");
 
@@ -837,10 +845,10 @@ int main(void) {
     // setup order files
     unsigned char envvar[120];
     memset(envvar, 0, sizeof(envvar));
-    if (Lib_FileGetEnv("ORDERS_NEW", envvar)) Lib_FilePutEnv("ORDERS_NEW", envvar);
-    if (Lib_FileGetEnv("ORDERS_PENDING", envvar)) Lib_FilePutEnv("ORDERS_PENDING", envvar);
-    if (Lib_FileGetEnv("ORDERS_PICKUP", envvar)) Lib_FilePutEnv("ORDERS_PICKUP", envvar);
-    if (Lib_FileGetEnv("ORDERS_DELIVERY", envvar)) Lib_FilePutEnv("ORDERS_DELIVERY", envvar);
+    if (Lib_FileGetEnv("NEW", envvar)) Lib_FilePutEnv("NEW", "");
+    if (Lib_FileGetEnv("PENDNG", envvar)) Lib_FilePutEnv("PENDNG", "");
+    if (Lib_FileGetEnv("PICKUP", envvar)) Lib_FilePutEnv("PICKUP", "");
+    if (Lib_FileGetEnv("DELVRY", envvar)) Lib_FilePutEnv("DELVRY", "");
     
 	while (TRUE) {
         Lib_LcdCls();
@@ -853,7 +861,7 @@ int main(void) {
         // display content using views
 		if (view == VIEW_WAITING) {
             memset(title, 0, sizeof(title));
-			if (Display_Waiting(TRUE)) view = VIEW_MAIN;
+			if (Display_Waiting(TRUE, TRUE)) view = VIEW_MAIN;
 			else return 0;
 
 		} else if (view == VIEW_MAIN) {
@@ -895,24 +903,26 @@ int main(void) {
             char *order_list_pp[20];
 
             memset(title, 0, sizeof(title));
+            memset(envval, 0, sizeof(envval));
             if (status == STATUS_NEW) {
                 strcpy(title, "New orders");
-                Lib_FileGetEnv("ORDERS_NEW", envval);
+                Lib_FileGetEnv("NEW", envval);
             }
 			else if (status == STATUS_PENDING) {
                 strcpy(title, "Pending orders");
-                Lib_FileGetEnv("ORDERS_PENDING", envval);
+                Lib_FileGetEnv("PENDNG", envval);
             }
 			else if (status == STATUS_PICKED_UP) {
                 strcpy(title, "Picked-up");
-                Lib_FileGetEnv("ORDERS_PICKUP", envval);
+                Lib_FileGetEnv("PICKUP", envval);
             }
 			else if (status == STATUS_DELIVERED) {
                 strcpy(title, "Delivered");
-                Lib_FileGetEnv("ORDERS_DELIVERY", envval);
+                Lib_FileGetEnv("DELVRY", envval);
             }
 
             memset(order_list, 0, sizeof(order_list));
+            memset(order_list_pp, 0, sizeof(order_list_pp));
             if (strlen(envval)) {
                 // place orders in list
                 i = 0; 
@@ -926,7 +936,6 @@ int main(void) {
                 }
                 order_list_pp[i] = NULL;
 
-                char vall[100];
                 int index = View_List(order_list_pp, 0);
                 switch (index) {
                     case KEYCANCEL:
@@ -1211,12 +1220,11 @@ int main(void) {
                             break;
 
                         default:
-                            Display_Notice("Resetting network\nsettings.");
-                            Wls_Reset();
                             list_env_value[0] = list_value;
                             Lib_FilePutEnv("SIMNO", list_env_value);
                             Wls_SelectSim((int)list_env_value[0]);
                             view = VIEW_SETTINGS_NETWORK;
+                            Display_Notice("Restart device to\n reset settings.");
                     }
                     break;
 
