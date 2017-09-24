@@ -32,8 +32,6 @@
 #define STATUS_PICKED_UP  3
 #define STATUS_DELIVERED  4
 
-char *title = NULL;
-
 const APP_MSG App_Msg = {
 	"COOKSHOP.biz",
 	"0.1", 0, 0, 0,
@@ -171,6 +169,9 @@ char *Sample_Order_List[] = {
     NULL
 };
 
+char title[16];
+char order_number[8];
+
 static int view     = VIEW_WAITING;
 static int status   = STATUS_UNKNOWN;
 
@@ -296,7 +297,7 @@ void Display_Topbar(int force) {
         Clear_Topbar();
 
         Lib_LcdSetFont(LCD_FONT_SMALL);
-        if (title != NULL) Display_Title(title);
+        if (strlen(title)) Display_Title(title);
         else Display_Time();
 
         Display_Battery();
@@ -346,10 +347,7 @@ unsigned char Display_Waiting(int force) {
                 memset(order.bencode, 0, sizeof(order.bencode));
                 strcpy(order.bencode, msg);
                 
-                if (order_parse(&order)) {
-                    Print_Order(&order);
-                    order_save(&order);                    
-                }
+                if (order_parse(&order)) Print_Order(&order);
             }
             
             if (Lib_KbCheck()) continue;
@@ -443,15 +441,15 @@ int View_List(char **list, int scroll) {
 
     if (scroll < 0 || len < scroll) scroll = 0;
 
+    Clear_Content();
     Display_Topbar(TRUE);
-    Lib_LcdSetFont(LCD_FONT_MEDIUM);
 
     // scrolling
     while (len) {
         int count = 0;
         char** temp = (list + ((scroll / lines) * lines));
 
-        Clear_Content();
+        Lib_LcdSetFont(LCD_FONT_MEDIUM);
         Lib_LcdGotoxy(0, 14);
         
         while (*temp != NULL && count < lines) {
@@ -785,7 +783,7 @@ int Print_Order(order_t *order) {
         Print_Wrapped_Line(large_line, 32);        
     }
 
-    Lib_PrnStr("\n\n\n");
+    Lib_PrnStr("\n\n\n\n");
     Lib_PrnStr("  * * * www.cookshop.biz * * *  \n");
     Lib_PrnStr("\n\n\n\n\n\n\n\n\n\n");
 
@@ -844,38 +842,6 @@ int main(void) {
     if (Lib_FileGetEnv("ORDERS_PICKUP", envvar)) Lib_FilePutEnv("ORDERS_PICKUP", envvar);
     if (Lib_FileGetEnv("ORDERS_DELIVERY", envvar)) Lib_FilePutEnv("ORDERS_DELIVERY", envvar);
     
-    // PDU mode
-    // Wls_SendCmdRequest("AT+CMGF=0\r", 10);
-
-    // initialize printer
-	// if (Lib_PrnInit()) return 1;
-
-  	// Display_Loading(9);
-	// Lib_DelayMs(1500);
-
-    // intro beeps
-	// Display_Loading(10);
-
-    // Lib_Beep();
-	// Lib_DelayMs(1000);
-
-    // Lib_Beef(0, 2000);
-	// Lib_DelayMs(100);
-    // Lib_Beef(1, 2000);
-	// Lib_DelayMs(100);
-    // Lib_Beef(2, 2000);
-	// Lib_DelayMs(100);
-    // Lib_Beef(3, 2000);
-	// Lib_DelayMs(100);
-    // Lib_Beef(4, 2000);
-	// Lib_DelayMs(100);
-    // Lib_Beef(5, 2000);
-	// Lib_DelayMs(100);
-    // Lib_Beef(6, 2000);
-
-    // Lib_Beef(6, 150);
-    // Lib_Beef(3, 250);
-
 	while (TRUE) {
         Lib_LcdCls();
         Lib_LcdClrDotBuf();
@@ -886,12 +852,12 @@ int main(void) {
 
         // display content using views
 		if (view == VIEW_WAITING) {
-            title = NULL;
+            memset(title, 0, sizeof(title));
 			if (Display_Waiting(TRUE)) view = VIEW_MAIN;
 			else return 0;
 
 		} else if (view == VIEW_MAIN) {
-			title = NULL;
+			memset(title, 0, sizeof(title));
 			switch (View_Menu(Main_Menu)) {
 				case KEY1:
                     view = VIEW_ORDER_LIST; 
@@ -926,22 +892,23 @@ int main(void) {
             char *p;
             char envval[120];
             char order_list[20][24];
-            char **order_list_pp;
+            char *order_list_pp[20];
 
+            memset(title, 0, sizeof(title));
             if (status == STATUS_NEW) {
-                title = "New orders";
+                strcpy(title, "New orders");
                 Lib_FileGetEnv("ORDERS_NEW", envval);
             }
 			else if (status == STATUS_PENDING) {
-                title = "Pending orders";
+                strcpy(title, "Pending orders");
                 Lib_FileGetEnv("ORDERS_PENDING", envval);
             }
 			else if (status == STATUS_PICKED_UP) {
-                title = "Picked-up";
+                strcpy(title, "Picked-up");
                 Lib_FileGetEnv("ORDERS_PICKUP", envval);
             }
 			else if (status == STATUS_DELIVERED) {
-                title = "Delivered";
+                strcpy(title, "Delivered");
                 Lib_FileGetEnv("ORDERS_DELIVERY", envval);
             }
 
@@ -953,115 +920,150 @@ int main(void) {
                 while (p != NULL) {
                     strcat(order_list[i], "CS");
                     strcat(order_list[i], p);
-                    (order_list_pp + i) = &order_list[i];
+                    order_list_pp[i] = *(order_list + i);
                     p = strtok(NULL, ",");
                     i++;
                 }
+                order_list_pp[i] = NULL;
 
-                switch (View_List(order_list_pp, 0)) {
+                char vall[100];
+                int index = View_List(order_list_pp, 0);
+                switch (index) {
                     case KEYCANCEL:
                     case KEYMENU:
                         view = VIEW_MAIN;
                         break;
 
                     default:
-                        // FIXME: first check if it is a number and there exists
-                        // an order with that number
-
-                        // order = (int) ucKey;
+                        memset(order_number, 0, sizeof(order_number));
+                        strcpy(order_number, order_list[index]);
                         view = VIEW_ORDER;
                 }
-            } else view = VIEW_MAIN;
-
+            } else {
+                Display_Notice("No orders found.");
+                view = VIEW_MAIN;
+            }
 		} else if (view == VIEW_ORDER) {
-			title = "Order CS146001";			
-            if (status == STATUS_NEW) {
-                switch (View_Menu(New_Order_Menu)) {
-                    case KEY1:
-                        if (Display_Confirm("Confirm acceptance\nof this order?", "Yes", "No")) {
-                            Display_Notice("Order accepted.");
-                            view = VIEW_MAIN;
-                        } break;
+            order_t order;
+            int order_found = FALSE;
 
-                    case KEY2:
-                        if (Display_Confirm("Request changes to\nthis order?", "Yes", "No")) {
-                            Display_Notice("Order changes \nrequested.");
-                            view = VIEW_MAIN;
-                        } break;
-                    
-                    case KEY3:
-                        if (Display_Confirm("Confirm rejection of\nthis order?", "Yes", "No")) {
-                            Display_Notice("Order rejected.");
-                            view = VIEW_MAIN;
-                        } break;
-                    
-                    case KEY4:
-                        break;
+            if (strlen(order_number)) {
+                int fid, data_len;
+                char fname[16];
+                char *pt = order_number;
+                unsigned char data[SMS_MESSAGE_LENGTH];
 
-                    case KEY5:
-                        // Print_Order("CS146001"); 
-                        break;
+                memset(title, 0, sizeof(title));
+                sprintf(title, "Order %s", order_number);
 
-                    case KEYCANCEL:
-                    case KEYBACKSPACE:
-                        view = VIEW_ORDER_LIST;
-                        break;
-
-                    default:
-                        view = VIEW_ORDER;
-                }
+                memset(fname, 0, sizeof(fname));
+                sprintf(fname, "ORDERS_%s", pt + 2);
             
-            } else if (status == STATUS_PENDING) {
-                switch (View_Menu(Pending_Order_Menu)) {
-                    case KEY1:
-                        if (Display_Confirm("Request changes to\nthis order?", "Yes", "No")) {
-                            Display_Notice("Order changes \nrequested.");
-                            view = VIEW_MAIN;
-                        } break;
-                    
-                    case KEY2:
-                        if (Display_Confirm("Confirm cancellation\nof this order?", "Yes", "No")) {
-                            Display_Notice("Order cancelled.");
-                            view = VIEW_MAIN;
-                        } break;
-                    
-                    case KEY3:
-                        break;
+                if (Lib_FileExist(fname) != FILE_NOTEXIST) {
+                    fid = Lib_FileOpen(fname, O_RDWR);
+                    data_len = Lib_FileRead(fid, data, SMS_MESSAGE_LENGTH);
 
-                    case KEY4:
-                        // Print_Order("CS146001");
-                        break;
+                    if (data_len > 0) {
+                        memset(order.bencode, 0, sizeof(order.bencode));
+                        strcpy(order.bencode, data);
+                        if (order_parse(&order)) order_found = TRUE;
+                    }                    
+                }
+            }
+
+            if (order_found) {
+                if (status == STATUS_NEW) {
+                    switch (View_Menu(New_Order_Menu)) {
+                        case KEY1:
+                            if (Display_Confirm("Confirm acceptance\nof this order?", "Yes", "No")) {
+                                Display_Notice("Order accepted.");
+                                view = VIEW_ORDER_LIST;
+                            } break;
+
+                        case KEY2:
+                            if (Display_Confirm("Request changes to\nthis order?", "Yes", "No")) {
+                                Display_Notice("Order changes \nrequested.");
+                                view = VIEW_ORDER_LIST;
+                            } break;
                         
-                    case KEYCANCEL:
-                    case KEYBACKSPACE:
-                        view = VIEW_ORDER_LIST;
-                        break;
-
-                    default:
-                        view = VIEW_ORDER;
-                }
-            
-            } else if (status == STATUS_PICKED_UP || status == STATUS_DELIVERED) {
-                switch (View_Menu(Non_Pending_Order_Menu)) {
-                    case KEY1:
-                        break;
-
-                    case KEY2:
-                        // Print_Order("CS146001"); 
-                        break;
+                        case KEY3:
+                            if (Display_Confirm("Confirm rejection of\nthis order?", "Yes", "No")) {
+                                Display_Notice("Order rejected.");
+                                view = VIEW_ORDER_LIST;
+                            } break;
                         
-                    case KEYCANCEL:
-                    case KEYBACKSPACE:
-                        view = VIEW_ORDER_LIST; break;
+                        case KEY4:
+                            break;
 
-                    default:
-                        view = VIEW_ORDER;
+                        case KEY5:
+                            Print_Order(&order);
+                            break;
+
+                        case KEYCANCEL:
+                        case KEYBACKSPACE:
+                            view = VIEW_ORDER_LIST;
+                            break;
+
+                        default:
+                            view = VIEW_ORDER;
+                    }
+                
+                } else if (status == STATUS_PENDING) {
+                    switch (View_Menu(Pending_Order_Menu)) {
+                        case KEY1:
+                            if (Display_Confirm("Request changes to\nthis order?", "Yes", "No")) {
+                                Display_Notice("Order changes \nrequested.");
+                                view = VIEW_ORDER_LIST;
+                            } break;
+                        
+                        case KEY2:
+                            if (Display_Confirm("Confirm cancellation\nof this order?", "Yes", "No")) {
+                                Display_Notice("Order cancelled.");
+                                view = VIEW_ORDER_LIST;
+                            } break;
+                        
+                        case KEY3:
+                            break;
+
+                        case KEY4:
+                            // Print_Order("CS146001");
+                            break;
+                            
+                        case KEYCANCEL:
+                        case KEYBACKSPACE:
+                            view = VIEW_ORDER_LIST;
+                            break;
+
+                        default:
+                            view = VIEW_ORDER;
+                    }
+                
+                } else if (status == STATUS_PICKED_UP || status == STATUS_DELIVERED) {
+                    switch (View_Menu(Non_Pending_Order_Menu)) {
+                        case KEY1:
+                            break;
+
+                        case KEY2:
+                            // Print_Order("CS146001"); 
+                            break;
+                            
+                        case KEYCANCEL:
+                        case KEYBACKSPACE:
+                            view = VIEW_ORDER_LIST; break;
+
+                        default:
+                            view = VIEW_ORDER;
+                    }
+                
                 }
-            
+            } else {
+                Display_Notice("No order found.");
+                view = VIEW_ORDER_LIST;
             }
 
 		} else if (view == VIEW_SETTINGS) {
-			title = "Settings";
+            memset(title, 0, sizeof(title));
+			strcpy(title, "Settings");
             switch (View_Menu(Settings_Menu)) {
                 case KEY1:
                     view = VIEW_SETTINGS_DISPLAY; break;
@@ -1071,22 +1073,22 @@ int main(void) {
 
                 case KEY3:
                     view = VIEW_SETTINGS_NETWORK;
-                    title = "Network";
+                    strcpy(title, "Network");
                     break;
 
                 case KEY4:
                     view = VIEW_SETTINGS_PRINTER;
-                    title = "Printer";
+                    strcpy(title, "Printer");
                     break;
 
                 case KEY5:
                     view = VIEW_SETTINGS_CLOCK;
-                    title = "Clock";
+                    strcpy(title, "Clock");
                     break;
 
                 case KEY6:
                     view = VIEW_SETTINGS_BATTERY;
-                    title = "Battery";
+                    strcpy(title, "Battery");
                     break;
 
 				case KEYCANCEL:
@@ -1098,10 +1100,12 @@ int main(void) {
 					view = VIEW_SETTINGS;
 			}
 		} else if (view == VIEW_SETTINGS_DISPLAY) {
-			title = "Display";
+            memset(title, 0, sizeof(title));
+			strcpy(title, "Display");
             switch (View_Menu(Settings_Display_Menu)) {
                 case KEY1:
-                    title = "Contrast";
+                    memset(title, 0, sizeof(title));
+                    strcpy(title, "Contrast");
                     if (Lib_FileGetEnv("LCDGRAY", list_env_value)) list_env_value[0] = 0x30;
                     list_value = View_List(Settings_Display_Contrast_List, list_env_value[0]);
                     switch (list_value) {
@@ -1118,7 +1122,8 @@ int main(void) {
                     break;
 
                 case KEY2:
-                    title = "Backlight";
+                    memset(title, 0, sizeof(title));
+                    strcpy(title, "Backlight");
                     if (Lib_FileGetEnv("BCKLIGHT", list_env_value)) list_env_value[0] = 0x30;
                     list_value = View_List(Settings_Display_Backlight_List, list_env_value[0]);
                     switch (list_value) {
@@ -1143,10 +1148,12 @@ int main(void) {
                     view = VIEW_SETTINGS_DISPLAY;
             }
 		} else if (view == VIEW_SETTINGS_SOUND) {
-            title = "Sound";
+            memset(title, 0, sizeof(title));
+            strcpy(title, "Sound");
             switch (View_Menu(Settings_Sound_Menu)) {
                 case KEY1:
-                    title = "Keypad";
+                    memset(title, 0, sizeof(title));
+                    strcpy(title, "Keypad");
                     if (Lib_FileGetEnv("KBMUTE", list_env_value)) list_env_value[0] = 0x30;
                     list_value = View_List(Settings_Sound_Keypad_List, list_env_value[0]);
                     switch (list_value) {
@@ -1163,7 +1170,8 @@ int main(void) {
                     break;
 
                 case KEY2:
-                    title = "Ringtone";
+                    memset(title, 0, sizeof(title));
+                    strcpy(title, "Ringtone");
                     if (Lib_FileGetEnv("RINGTONE", list_env_value)) list_env_value[0] = 0x30;
                     list_value = View_List(Settings_Sound_Ringtone_List, list_env_value[0]);
                     switch (list_value) {
@@ -1188,10 +1196,12 @@ int main(void) {
                     view = VIEW_SETTINGS_SOUND;
             }
 		} else if (view == VIEW_SETTINGS_NETWORK) {
-			title = "Network";
+            memset(title, 0, sizeof(title));
+			strcpy(title, "Network");
             switch (View_Menu(Settings_Network_Menu)) {
                 case KEY1:
-                    title = "Select SIM";
+                    memset(title, 0, sizeof(title));
+                    strcpy(title, "Select SIM");
                     if (Lib_FileGetEnv("SIMNO", list_env_value)) list_env_value[0] = 0x30;
                     list_value = View_List(Settings_Network_Sim_List, list_env_value[0]);
                     switch (list_value) {
@@ -1211,12 +1221,13 @@ int main(void) {
                     break;
 
                 case KEY2:
-                    title = "Enter PIN";
+                    strcpy(title, "Enter PIN");
                     Display_Notice("Enter PIN");
                     break;
 
                 case KEY3:
-                    title = "Check Status";
+                    memset(title, 0, sizeof(title));
+                    strcpy(title, "Check Status");
                     switch (Wls_CheckSim()) {
                         case WLS_OK: Display_Notice("SIM status OK."); break;
                         case WLS_NOSIM: Display_Notice("No SIM found."); break;
@@ -1240,10 +1251,12 @@ int main(void) {
                     view = VIEW_SETTINGS_NETWORK;
             }
 		} else if (view == VIEW_SETTINGS_PRINTER) {
-			title = "Printer";
+            memset(title, 0, sizeof(title));
+			strcpy(title, "Printer");
             switch (View_Menu(Settings_Printer_Menu)) {
                 case KEY1:
-                    title = "Contrast";
+                    memset(title, 0, sizeof(title));
+                    strcpy(title, "Contrast");
                     if (Lib_FileGetEnv("PRNGRAY", list_env_value)) list_env_value[0] = 0x30;
                     list_value = View_List(Settings_Printer_Contrast_List, list_env_value[0]);
                     switch (list_value) {
@@ -1260,7 +1273,8 @@ int main(void) {
                     break;
 
                 case KEY2:
-                    title = "Speed";
+                    memset(title, 0, sizeof(title));
+                    strcpy(title, "Speed");
                     if (Lib_FileGetEnv("PRNSPEED", list_env_value)) list_env_value[0] = 0x30;
                     list_value = View_List(Settings_Printer_Speed_List, list_env_value[0]);
                     switch (list_value) {
@@ -1286,7 +1300,7 @@ int main(void) {
             }
 		} else {
             view = VIEW_WAITING;
-            title = NULL;
+            memset(title, 0, sizeof(title));
         }
     }
 	return 1;			
