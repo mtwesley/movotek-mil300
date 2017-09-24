@@ -56,22 +56,19 @@ char *New_Order_Menu[] = {
     "[1] Accept order",
     "[2] Change order",
     "[3] Reject order",
-    "[4] View order",
-    "[5] Print order",
+    "[4] Print order",
     NULL
 };
 
 char *Pending_Order_Menu[] = {
     "[1] Change order",
     "[2] Cancel order",
-    "[3] View order",
-    "[4] Print order",
+    "[3] Print order",
     NULL
 };
 
 char *Non_Pending_Order_Menu[] = {
-    "[1] View order",
-    "[2] Print order",
+    "[1] Print order",
     NULL
 };
 
@@ -331,9 +328,11 @@ unsigned char Display_Waiting(int force, int reset) {
             int msg_len;
 
             // annoying beep if new orders
-            Lib_FileGetEnv("NEW", envvar);
+            Lib_FileGetEnv(ORDERS_NEW, envvar);
             if (beep_now && count_order_numbers(envvar)) {
                 Beep_Cookshop();
+                view = VIEW_ORDER_LIST;
+                status = STATUS_NEW;
                 beep_now = FALSE;
             } else beep_now = TRUE;
 
@@ -599,8 +598,8 @@ int Print_Wrapped_Line(char *text, int len) {
         memset(buf, 0, sizeof(buf));
         while (start[0] == ' ') { start++; end++; continue; }
         if (strlen(start) < len) end = start + strlen(start);
-        if (end == start) strrstr(start, "\n", end, len);
-        if (end == start) strrstr(start, " ", end, len);
+        if (end == start) end = (char *)strrstr(start, "\n", len);
+        if (end == start) end = (char *)strrstr(start, " ", len);
         if (end == start) end = start + len;
         
         strncpy(buf, start, (end - start));
@@ -845,10 +844,10 @@ int main(void) {
     // setup order files
     unsigned char envvar[120];
     memset(envvar, 0, sizeof(envvar));
-    if (Lib_FileGetEnv("NEW", envvar)) Lib_FilePutEnv("NEW", "");
-    if (Lib_FileGetEnv("PENDNG", envvar)) Lib_FilePutEnv("PENDNG", "");
-    if (Lib_FileGetEnv("PICKUP", envvar)) Lib_FilePutEnv("PICKUP", "");
-    if (Lib_FileGetEnv("DELVRY", envvar)) Lib_FilePutEnv("DELVRY", "");
+    if (Lib_FileGetEnv(ORDERS_NEW, envvar)) Lib_FilePutEnv(ORDERS_NEW, "");
+    if (Lib_FileGetEnv(ORDERS_PENDING, envvar)) Lib_FilePutEnv(ORDERS_PENDING, "");
+    if (Lib_FileGetEnv(ORDERS_PICKED_UP, envvar)) Lib_FilePutEnv(ORDERS_PICKED_UP, "");
+    if (Lib_FileGetEnv(ORDERS_DELIVERED, envvar)) Lib_FilePutEnv(ORDERS_DELIVERED, "");
     
 	while (TRUE) {
         Lib_LcdCls();
@@ -906,19 +905,19 @@ int main(void) {
             memset(envval, 0, sizeof(envval));
             if (status == STATUS_NEW) {
                 strcpy(title, "New orders");
-                Lib_FileGetEnv("NEW", envval);
+                Lib_FileGetEnv(ORDERS_NEW, envval);
             }
 			else if (status == STATUS_PENDING) {
                 strcpy(title, "Pending orders");
-                Lib_FileGetEnv("PENDNG", envval);
+                Lib_FileGetEnv(ORDERS_PENDING, envval);
             }
 			else if (status == STATUS_PICKED_UP) {
                 strcpy(title, "Picked-up");
-                Lib_FileGetEnv("PICKUP", envval);
+                Lib_FileGetEnv(ORDERS_PICKED_UP, envval);
             }
 			else if (status == STATUS_DELIVERED) {
                 strcpy(title, "Delivered");
-                Lib_FileGetEnv("DELVRY", envval);
+                Lib_FileGetEnv(ORDERS_DELIVERED, envval);
             }
 
             memset(order_list, 0, sizeof(order_list));
@@ -957,27 +956,10 @@ int main(void) {
             int order_found = FALSE;
 
             if (strlen(order_number)) {
-                int fid, data_len;
-                char fname[16];
-                char *pt = order_number;
-                unsigned char data[SMS_MESSAGE_LENGTH];
-
                 memset(title, 0, sizeof(title));
                 sprintf(title, "Order %s", order_number);
 
-                memset(fname, 0, sizeof(fname));
-                sprintf(fname, "ORDERS_%s", pt + 2);
-            
-                if (Lib_FileExist(fname) != FILE_NOTEXIST) {
-                    fid = Lib_FileOpen(fname, O_RDWR);
-                    data_len = Lib_FileRead(fid, data, SMS_MESSAGE_LENGTH);
-
-                    if (data_len > 0) {
-                        memset(order.bencode, 0, sizeof(order.bencode));
-                        strcpy(order.bencode, data);
-                        if (order_parse(&order)) order_found = TRUE;
-                    }                    
-                }
+                if (order_find(&order, order_number) && order_parse(&order)) order_found = TRUE;
             }
 
             if (order_found) {
@@ -985,6 +967,8 @@ int main(void) {
                     switch (View_Menu(New_Order_Menu)) {
                         case KEY1:
                             if (Display_Confirm("Confirm acceptance\nof this order?", "Yes", "No")) {
+                                remove_order_number(order.number, ORDERS_NEW);
+                                add_order_number(order.number, ORDERS_PENDING);
                                 Display_Notice("Order accepted.");
                                 view = VIEW_ORDER_LIST;
                             } break;
@@ -992,19 +976,22 @@ int main(void) {
                         case KEY2:
                             if (Display_Confirm("Request changes to\nthis order?", "Yes", "No")) {
                                 Display_Notice("Order changes \nrequested.");
+                                // FIXME: Send SMS to request changes
+                                remove_order_number(order.number, ORDERS_NEW);
+                                order_delete(&order);
                                 view = VIEW_ORDER_LIST;
                             } break;
                         
                         case KEY3:
                             if (Display_Confirm("Confirm rejection of\nthis order?", "Yes", "No")) {
                                 Display_Notice("Order rejected.");
+                                // FIXME: Send SMS to reject order
+                                remove_order_number(order.number, ORDERS_NEW);
+                                order_delete(&order);
                                 view = VIEW_ORDER_LIST;
                             } break;
                         
                         case KEY4:
-                            break;
-
-                        case KEY5:
                             Print_Order(&order);
                             break;
 
@@ -1022,6 +1009,9 @@ int main(void) {
                         case KEY1:
                             if (Display_Confirm("Request changes to\nthis order?", "Yes", "No")) {
                                 Display_Notice("Order changes \nrequested.");
+                                // FIXME: Send SMS to request changes
+                                remove_order_number(order.number, ORDERS_PENDING);
+                                order_delete(&order);
                                 view = VIEW_ORDER_LIST;
                             } break;
                         
@@ -1032,10 +1022,7 @@ int main(void) {
                             } break;
                         
                         case KEY3:
-                            break;
-
-                        case KEY4:
-                            // Print_Order("CS146001");
+                            Print_Order(&order);
                             break;
                             
                         case KEYCANCEL:
@@ -1050,10 +1037,7 @@ int main(void) {
                 } else if (status == STATUS_PICKED_UP || status == STATUS_DELIVERED) {
                     switch (View_Menu(Non_Pending_Order_Menu)) {
                         case KEY1:
-                            break;
-
-                        case KEY2:
-                            // Print_Order("CS146001"); 
+                            Print_Order(&order); 
                             break;
                             
                         case KEYCANCEL:
@@ -1224,7 +1208,7 @@ int main(void) {
                             Lib_FilePutEnv("SIMNO", list_env_value);
                             Wls_SelectSim((int)list_env_value[0]);
                             view = VIEW_SETTINGS_NETWORK;
-                            Display_Notice("Restart device to\n reset settings.");
+                            Display_Notice("Restart device to\nreset settings.");
                     }
                     break;
 

@@ -162,7 +162,6 @@ int sms_get_msg(unsigned char *msg, int *msg_len, int max_len) {
                 }
             }
             if (has_message) break;
-            Lib_DelayMs(1000);
         }
 
         if (has_message) {
@@ -187,38 +186,77 @@ int sms_get_msg(unsigned char *msg, int *msg_len, int max_len) {
     return 0;
 }
 
+int order_find(order_t *order, char *order_number) {
+    int fid, data_len;
+    char fname[16];
+    unsigned char data[SMS_MESSAGE_LENGTH];
+
+    memset(fname, 0, sizeof(fname));
+    sprintf(fname, "ORDERS_%s", order_number);
+
+    if (Lib_FileExist(fname) != FILE_NOTEXIST) {
+        fid = Lib_FileOpen(fname, O_RDWR);
+        data_len = Lib_FileRead(fid, data, SMS_MESSAGE_LENGTH);
+
+        if (data_len > 0) {
+            memset(order->bencode, 0, sizeof(order->bencode));
+            strcpy(order->bencode, data);
+            return 1;
+        }                    
+    }
+    return 0;
+}
+
 int order_save(order_t *order) {
     int fid;
     char fname[16];
     char envname[20];
-    unsigned char envtmp[120];
-    unsigned char envval[120];
-    unsigned char buf[4000];
 
     // remove order from all statuses
-    remove_order_number(order->number, "NEW");
-    remove_order_number(order->number, "PENDNG");
-    remove_order_number(order->number, "PICKUP");
-    remove_order_number(order->number, "DELVRY");
+    remove_order_number(order->number, ORDERS_NEW);
+    remove_order_number(order->number, ORDERS_PENDING);
+    remove_order_number(order->number, ORDERS_PICKED_UP);
+    remove_order_number(order->number, ORDERS_DELIVERED);
     
     // add order to correct status
     memset(envname, 0, sizeof(envname));
-    if (order->status == 'P') strcpy(envname, "NEW"); 
-    else if (order->status == 'C' && order->type == 'P') strcpy(envname, "PICKUP");
-    else if (order->status == 'C' && order->type == 'D') strcpy(envname, "DELVRY");
-    else strcpy(envname, "PENDNG");
+    if (order->status == 'P') strcpy(envname, ORDERS_NEW); 
+    else if (order->status == 'C' && order->type == 'P') strcpy(envname, ORDERS_PICKED_UP);
+    else if (order->status == 'C' && order->type == 'D') strcpy(envname, ORDERS_DELIVERED);
+    else strcpy(envname, ORDERS_PENDING);
     
     add_order_number(order->number, envname);
     
-    // write order to a file
+    // write order to a file, removing old file if exists
     memset(fname, 0, sizeof(fname));
-    sprintf(fname, "ORDERS_%i", order->number);
+    sprintf(fname, "ORDERS_CS%i", order->number);
 
     if (Lib_FileExist(fname) != FILE_NOTEXIST) Lib_FileRemove(fname);
     fid = Lib_FileOpen(fname, O_CREATE);
 
     Lib_FileSeek(fid, 0, FILE_SEEK_SET);
     Lib_FileWrite(fid, (BYTE *)order->bencode, strlen(order->bencode));
+
+    return 1;
+}
+
+int order_delete(order_t *order) {
+    int fid;
+    char fname[16];
+    
+    // remove order from all statuses
+    remove_order_number(order->number, ORDERS_NEW);
+    remove_order_number(order->number, ORDERS_PENDING);
+    remove_order_number(order->number, ORDERS_PICKED_UP);
+    remove_order_number(order->number, ORDERS_DELIVERED);
+    
+    // delete order file
+    memset(fname, 0, sizeof(fname));
+    sprintf(fname, "ORDERS_CS%i", order->number);
+
+    if (Lib_FileExist(fname) != FILE_NOTEXIST) Lib_FileRemove(fname);
+
+    return 1;
 }
 
 int order_parse(order_t *order) {

@@ -2,38 +2,38 @@
 
 #define NULL 0
 
-int strrstr(char *in, char *needle, char *out, int length) {
-	char *p, *o;
-	out = p = o = in;
+char* strrstr(char *haystack, char *needle, int length) {
+	char *r = haystack;
+	char *p = haystack;
+	char *o = haystack;
 
-	if (!needle[0]) out = (char*)in + strlen(in);
-	do {
-		p = strstr(in, needle);
-		if (!p) return 0;
-		out = p;
-		in = p + 1;
-	} while ((int)(p - o) < length);
-	return 0;
+	if (!needle[0]) return (char*)haystack + strlen(haystack);
+	while (1) {
+		p = strstr(haystack, needle);
+		if (!p ||  ((p - o) > length)) return r;
+		r = p;
+		haystack = p + 1;
+	}
 }
 
-void wraplines(char *text, int len) {
-	char buf[len];
-	char *start, *end;
+// void wraplines(char *text, int len) {
+// 	char buf[len];
+// 	char *start, *end;
 
-	start = end = text;
-	do {	
-		memset(buf, 0, sizeof(buf));
-		while (start[0] == ' ') { start++; end++; continue; }
-		if (strlen(start) < len) end = start + strlen(start);
-		if (end == start) strrstr(start, "\n", end, len);
-		if (end == start) strrstr(start, " ", end, len);
-		if (end == start) end = start + len;
+// 	start = end = text;
+// 	do {	
+// 		memset(buf, 0, sizeof(buf));
+// 		while (start[0] == ' ') { start++; end++; continue; }
+// 		if (strlen(start) < len) end = start + strlen(start);
+// 		if (end == start) strrstr(start, "\n", end, len);
+// 		if (end == start) strrstr(start, " ", end, len);
+// 		if (end == start) end = start + len;
 		
-		strncpy(buf, start, (end - start));
-		printf("%s\n", buf);
-		start = ++end;
-	} while (start < text + strlen(text));
-}
+// 		strncpy(buf, start, (end - start));
+// 		printf("%s\n", buf);
+// 		start = ++end;
+// 	} while (start < text + strlen(text));
+// }
 
 unsigned int bin_ts(int x) {
 	return (x >> 4) * 10 + (x & 0x0f);
