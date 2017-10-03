@@ -762,7 +762,7 @@ int Print_Order(order_t *order) {
         Lib_PrnStr(large_line);
     }
 
-    // // cash due
+    // cash due
     memset(text_short, 0, sizeof(text_short));
     memset(large_line, 0, sizeof(large_line));
     if (order_get_cash_due(order, text_short) && strlen(text_short)) {
