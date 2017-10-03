@@ -10,9 +10,11 @@
 #define SMS_MULTIPART       0x40
 
 #define SMS_MULTIPART_MAX   32
-#define SMS_MESSAGE_MINUTES 60
+#define SMS_MESSAGE_MINUTES 15
 #define SMS_MESSAGE_LENGTH  4000
 #define SMS_BUFFER_LENGTH   16000
+
+#define SMS_MESSAGE_LIST "SMSLST"
 
 typedef signed char        int8_t;
 typedef short              int16_t;

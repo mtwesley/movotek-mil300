@@ -75,9 +75,88 @@ int count_order_numbers(char *in) {
     return i;
 }
 
+int envlist_pull(char *list, char *item) {
+    unsigned char envtmp[120];
+    unsigned char envval[120];
+
+    memset(envtmp, 0, sizeof(envtmp));
+    memset(envval, 0, sizeof(envval));
+    Lib_FileGetEnv(list, envtmp);
+
+	char *p = strtok(envtmp, ",");
+	while (p != NULL) {
+		if (strcmp(p, item)) {
+			if (strlen(envval)) strcat(envval, ",");
+			strcat(envval, p);
+		}
+		p = strtok(NULL, ",");
+    }
+
+    Lib_FilePutEnv(list, envval);
+    return 0;
+}
+
+int envlist_push(char *list, char *item) {
+    unsigned char envval[120];
+
+    memset(envval, 0, sizeof(envval));
+    Lib_FileGetEnv(list, envval);
+
+    if (!strstr(envval, item)) {
+        if (strlen(envval)) strcat(envval, ",");
+        strcat(envval, item);
+    }
+
+    Lib_FilePutEnv(list, envval);
+    return 0;
+}
+
+char *envlist_get_item(char* list, int index) {
+    unsigned char envval[120];
+    
+    memset(envval, 0, sizeof(envval));    
+    Lib_FileGetEnv(list, envval);
+
+    char *p = strtok(envval, ",");
+
+	int i = 0;
+	while (p != NULL && i < index) {
+		p = strtok(NULL, ",");
+		i++;
+    }
+    
+    if (strlen(p)) return p;
+    return NULL;
+}
+
+int envlist_has_item(char *list, char *item) {
+    unsigned char envval[120];
+    
+    memset(envval, 0, sizeof(envval));    
+    Lib_FileGetEnv(list, envval);
+
+    if (strstr(envval, item)) return 1;
+    return 0;
+}
+
+int envlist_count(char *list) {
+    unsigned char envval[120];
+
+    memset(envval, 0, sizeof(envval));    
+    Lib_FileGetEnv(list, envval);
+    
+    int i = 0;
+    if (strlen(envval)) {
+        for (i = 0; envval[i]; envval[i]==',' ? i++ : *envval++); 
+        i++;
+    }
+    return i;
+}
+
 int sms_get_msg(unsigned char *msg, int *msg_len, int max_len) {
     int i, j;
     sms_t sms;
+    unsigned char envvar[120];
 
     unsigned char msg_parts[SMS_MULTIPART_MAX][SMS_MULTIPART_SIZE];
     ushort msg_ids[SMS_MULTIPART_MAX];
@@ -86,6 +165,11 @@ int sms_get_msg(unsigned char *msg, int *msg_len, int max_len) {
     unsigned char *rsp, *tmp, *pdu;
     unsigned char cmd[20];
     unsigned char buf[SMS_BUFFER_LENGTH];
+
+    int fid;
+    char fname[16];
+    unsigned char data[SMS_MESSAGE_LENGTH];                    
+    char hexval[5];
 
     int has_message = FALSE;
     int multipart_ref = 0;
@@ -98,6 +182,9 @@ int sms_get_msg(unsigned char *msg, int *msg_len, int max_len) {
         msg_ids[j] = 0;
     }
 
+    memset(envvar, 0, sizeof(envvar));
+    if (Lib_FileGetEnv(SMS_MESSAGE_LIST, envvar)) Lib_FilePutEnv(SMS_MESSAGE_LIST, "");
+
     memset(buf, 0, SMS_BUFFER_LENGTH);
     strcpy(cmd, "AT+CMGL=4\r");
     if ((Wls_ExecuteCmd(cmd, strlen(cmd), buf, SMS_BUFFER_LENGTH, &len, 3000) == WLS_OK) && strlen(buf)) {
@@ -107,14 +194,15 @@ int sms_get_msg(unsigned char *msg, int *msg_len, int max_len) {
             tmp = strstr(pdu, "\r\n");
             pdu_len = tmp - pdu + 1;
 
+            sscanf(rsp, "+CMGL: %D,", &msg_id);
             if (!sms_decode_pdu(pdu, pdu_len, &sms)) {
                 int is_old_message = FALSE;                        
                 unsigned char datetime[8];
                 unsigned int new_datetime[8];
 
-                sscanf(rsp + 7, "%D", &msg_id);
-                Lib_GetDateTime(datetime);
+                // sscanf(rsp + 7, "%D", &msg_id);
 
+                Lib_GetDateTime(datetime);
                 for (i = 0; i < 8; i++) new_datetime[i] = bin_ts(datetime[i]);
 
                 // char notice[500];
@@ -127,19 +215,19 @@ int sms_get_msg(unsigned char *msg, int *msg_len, int max_len) {
                 // Lib_PrnStr("\n\n");
                 // Lib_PrnStart();
 
-                int diff = datetime_to_epoch(new_datetime) - datetime_to_epoch(sms.timestamp);
-                if (diff > (60 * SMS_MESSAGE_MINUTES)) {
-                    sprintf(cmd, "AT+CMGD=%d,0\r", msg_id);
-                    Wls_ExecuteCmd(cmd, strlen(cmd), buf, SMS_BUFFER_LENGTH, &len, 1000);
-                    multipart_ref = 0;
-                    continue;
-                }
+                // int diff = datetime_to_epoch(new_datetime) - datetime_to_epoch(sms.timestamp);
+                // if (diff > (60 * SMS_MESSAGE_MINUTES)) {
+                //     sprintf(cmd, "AT+CMGD=%d,0\r", msg_id);
+                //     Wls_ExecuteCmd(cmd, strlen(cmd), buf, SMS_BUFFER_LENGTH, &len, 1000);
+                //     multipart_ref = 0;
+                //     continue;
+                // }
 
                 if (sms.message_type & SMS_MULTIPART) {
                     int ref = sms.message_reference;
                     int num = sms.message_number;
                     int parts = sms.message_parts;
-
+                    
                     if (multipart_ref == 0) multipart_ref = ref;
                     else if (multipart_ref != ref) continue;
 
@@ -147,12 +235,37 @@ int sms_get_msg(unsigned char *msg, int *msg_len, int max_len) {
                     msg_ids[num] = msg_id;
 
                     for (i = 0; i < SMS_MULTIPART_MAX; i++) {
-                        j = i + 1;
-                        if (msg_ids[j] == 0) break;
-                        else if (j == parts) {
-                            has_message = TRUE;
-                            multipart_ref = 0;
+                        int data_len = 0;
+                        j = i + 1;                    
+                        
+                        memset(fname, 0, sizeof(fname));
+                        sprintf(fname, "%s_%X%X", SMS_MESSAGE_LIST, ref, num);
+                        if (Lib_FileExist(fname) != FILE_NOTEXIST) {
+                            memset(data, 0, sizeof(data));
+                            data_len = Lib_FileRead(fid, data, SMS_MESSAGE_LENGTH);
+                            if (data_len > 0) strcpy(msg_parts[num], data);
                         } 
+                        else if (msg_ids[j] == 0) break;
+                        else if (j == parts) has_message = TRUE;
+                    }
+
+                    if (!has_message && !envlist_has_item(SMS_MESSAGE_LIST, hexval)) {
+                        memset(hexval, 0, sizeof(hexval));
+                        sprintf(hexval, "%X%X", ref, num);
+                        envlist_push(SMS_MESSAGE_LIST, hexval);
+
+                        if (envlist_count(SMS_MESSAGE_LIST) > 20) {
+                            envlist_pull(SMS_MESSAGE_LIST, envlist_get_item(SMS_MESSAGE_LIST, 0));
+                        }
+
+                        memset(fname, 0, sizeof(fname));
+                        sprintf(fname, "%s_%s", SMS_MESSAGE_LIST, hexval);                    
+
+                        if (Lib_FileExist(fname) != FILE_NOTEXIST) Lib_FileRemove(fname);
+                        fid = Lib_FileOpen(fname, O_CREATE);
+                    
+                        Lib_FileSeek(fid, 0, FILE_SEEK_SET);
+                        Lib_FileWrite(fid, (BYTE *)sms.message, sms.message_length);
                     }
                 }
                 else if (multipart_ref == 0) {
@@ -161,17 +274,35 @@ int sms_get_msg(unsigned char *msg, int *msg_len, int max_len) {
                     has_message = TRUE;
                 }
             }
+
+            // FIXME: Only delete if saved and added to envlist
+            sprintf(cmd, "AT+CMGD=%d,0\r", msg_id);
+            Wls_ExecuteCmd(cmd, strlen(cmd), buf, SMS_BUFFER_LENGTH, &len, 1000);
+
             if (has_message) break;
         }
 
         if (has_message) {
             for (i = 0; i < SMS_MULTIPART_MAX; i++) {
                 j = i + 1;
-                if (msg_ids[j] != 0) {
-                    sprintf(cmd, "AT+CMGD=%d,0\r", msg_ids[j]);
-                    Wls_ExecuteCmd(cmd, strlen(cmd), buf, SMS_BUFFER_LENGTH, &len, 1000);
-                }
+                
+                // if (msg_ids[j] != 0) {
+                //     sprintf(cmd, "AT+CMGD=%d,0\r", msg_ids[j]);
+                //     Wls_ExecuteCmd(cmd, strlen(cmd), buf, SMS_BUFFER_LENGTH, &len, 1000);
+                // }
+                
+                char hexval[5];
+                memset(hexval, 0, sizeof(hexval));
+                sprintf(hexval, "%X%X", multipart_ref, j);                
+                envlist_pull(SMS_MESSAGE_LIST, hexval);
+
+                memset(fname, 0, sizeof(fname));
+                sprintf(fname, "%s_%s", SMS_MESSAGE_LIST, hexval);                    
+
+                if (Lib_FileExist(fname) != FILE_NOTEXIST) Lib_FileRemove(fname);
                 if (strlen(msg_parts[j])) strncat(msg, msg_parts[j], max_len);
+
+                multipart_ref = 0;
             }
         }
 
@@ -202,7 +333,7 @@ int order_find(order_t *order, char *order_number) {
             memset(order->bencode, 0, sizeof(order->bencode));
             strcpy(order->bencode, data);
             return 1;
-        }                    
+        }
     }
     return 0;
 }
