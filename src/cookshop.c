@@ -146,8 +146,9 @@ int envlist_count(char *list) {
     Lib_FileGetEnv(list, envval);
     
     int i = 0;
-    if (strlen(envval)) {
-        for (i = 0; envval[i]; envval[i]==',' ? i++ : *envval++); 
+    unsigned char *p = envval;
+    if (strlen(p)) {
+        for (i = 0; p[i]; p[i]==',' ? i++ : *p++); 
         i++;
     }
     return i;
@@ -185,9 +186,11 @@ int sms_get_msg(unsigned char *msg, int *msg_len, int max_len) {
     memset(envvar, 0, sizeof(envvar));
     if (Lib_FileGetEnv(SMS_MESSAGE_LIST, envvar)) Lib_FilePutEnv(SMS_MESSAGE_LIST, "");
 
+    Lib_PrnInit();
+    
     memset(buf, 0, SMS_BUFFER_LENGTH);
     strcpy(cmd, "AT+CMGL=4\r");
-    if ((Wls_ExecuteCmd(cmd, strlen(cmd), buf, SMS_BUFFER_LENGTH, &len, 3000) == WLS_OK) && strlen(buf)) {
+    if ((Wls_ExecuteCmd(cmd, strlen(cmd), buf, SMS_BUFFER_LENGTH, &len, 2000) == WLS_OK) && strlen(buf)) {
         tmp = buf;
         while (rsp = strstr(tmp, "+CMGL: ")) {
             pdu = strstr(rsp, "\r\n") + 2;
@@ -228,6 +231,9 @@ int sms_get_msg(unsigned char *msg, int *msg_len, int max_len) {
                     int num = sms.message_number;
                     int parts = sms.message_parts;
                     
+                    memset(hexval, 0, sizeof(hexval));
+                    sprintf(hexval, "%X%X", ref, num);
+
                     if (multipart_ref == 0) multipart_ref = ref;
                     else if (multipart_ref != ref) continue;
 
@@ -239,34 +245,36 @@ int sms_get_msg(unsigned char *msg, int *msg_len, int max_len) {
                         j = i + 1;                    
                         
                         memset(fname, 0, sizeof(fname));
-                        sprintf(fname, "%s_%X%X", SMS_MESSAGE_LIST, ref, num);
+                        sprintf(fname, "%s_%X%X", SMS_MESSAGE_LIST, ref, j);
+
                         if (Lib_FileExist(fname) != FILE_NOTEXIST) {
                             memset(data, 0, sizeof(data));
+                            fid = Lib_FileOpen(fname, O_RDWR);
                             data_len = Lib_FileRead(fid, data, SMS_MESSAGE_LENGTH);
-                            if (data_len > 0) strcpy(msg_parts[num], data);
+                            Lib_FileClose(fid);
+                            if (data_len > 0) strcpy(msg_parts[j], data);
                         } 
                         else if (msg_ids[j] == 0) break;
                         else if (j == parts) has_message = TRUE;
                     }
-
-                    if (!has_message && !envlist_has_item(SMS_MESSAGE_LIST, hexval)) {
-                        memset(hexval, 0, sizeof(hexval));
-                        sprintf(hexval, "%X%X", ref, num);
-                        envlist_push(SMS_MESSAGE_LIST, hexval);
-
-                        if (envlist_count(SMS_MESSAGE_LIST) > 20) {
-                            envlist_pull(SMS_MESSAGE_LIST, envlist_get_item(SMS_MESSAGE_LIST, 0));
-                        }
-
+                        
+                    if (envlist_count(SMS_MESSAGE_LIST) > 20) {
                         memset(fname, 0, sizeof(fname));
-                        sprintf(fname, "%s_%s", SMS_MESSAGE_LIST, hexval);                    
-
-                        if (Lib_FileExist(fname) != FILE_NOTEXIST) Lib_FileRemove(fname);
-                        fid = Lib_FileOpen(fname, O_CREATE);
-                    
-                        Lib_FileSeek(fid, 0, FILE_SEEK_SET);
-                        Lib_FileWrite(fid, (BYTE *)sms.message, sms.message_length);
+                        sprintf(fname, "%s_%s", SMS_MESSAGE_LIST, envlist_get_item(SMS_MESSAGE_LIST, 0));                    
+                        Lib_FileRemove(fname);
+                        envlist_pull(SMS_MESSAGE_LIST, envlist_get_item(SMS_MESSAGE_LIST, 0));                        
                     }
+                    envlist_push(SMS_MESSAGE_LIST, hexval);
+
+                    memset(fname, 0, sizeof(fname));
+                    sprintf(fname, "%s_%s", SMS_MESSAGE_LIST, hexval);                    
+
+                    Lib_FileRemove(fname);
+                    fid = Lib_FileOpen(fname, O_CREATE);
+                
+                    Lib_FileSeek(fid, 0, FILE_SEEK_SET);
+                    Lib_FileWrite(fid, (BYTE *)sms.message, sms.message_length);
+                    Lib_FileClose(fid);
                 }
                 else if (multipart_ref == 0) {
                     strncpy(msg_parts[1], sms.message, sms.message_length);
@@ -275,7 +283,6 @@ int sms_get_msg(unsigned char *msg, int *msg_len, int max_len) {
                 }
             }
 
-            // FIXME: Only delete if saved and added to envlist
             sprintf(cmd, "AT+CMGD=%d,0\r", msg_id);
             Wls_ExecuteCmd(cmd, strlen(cmd), buf, SMS_BUFFER_LENGTH, &len, 1000);
 
@@ -285,13 +292,7 @@ int sms_get_msg(unsigned char *msg, int *msg_len, int max_len) {
         if (has_message) {
             for (i = 0; i < SMS_MULTIPART_MAX; i++) {
                 j = i + 1;
-                
-                // if (msg_ids[j] != 0) {
-                //     sprintf(cmd, "AT+CMGD=%d,0\r", msg_ids[j]);
-                //     Wls_ExecuteCmd(cmd, strlen(cmd), buf, SMS_BUFFER_LENGTH, &len, 1000);
-                // }
-                
-                char hexval[5];
+
                 memset(hexval, 0, sizeof(hexval));
                 sprintf(hexval, "%X%X", multipart_ref, j);                
                 envlist_pull(SMS_MESSAGE_LIST, hexval);
@@ -299,18 +300,19 @@ int sms_get_msg(unsigned char *msg, int *msg_len, int max_len) {
                 memset(fname, 0, sizeof(fname));
                 sprintf(fname, "%s_%s", SMS_MESSAGE_LIST, hexval);                    
 
-                if (Lib_FileExist(fname) != FILE_NOTEXIST) Lib_FileRemove(fname);
+                Lib_FileRemove(fname);
                 if (strlen(msg_parts[j])) strncat(msg, msg_parts[j], max_len);
+
+                // Lib_PrnInit();
+                // Lib_PrnStr(hexval);
+                // Lib_PrnStr("\n\n");
+                // Lib_PrnStr(fname);
+                // Lib_PrnStr("\n\n\n\n\n\n\n\n\n");
+                // Lib_PrnStart();
 
                 multipart_ref = 0;
             }
         }
-
-        // Lib_PrnInit();
-        // Lib_PrnStr(buf);
-        // Lib_PrnStr("\n\n");
-        // Lib_PrnStart();
-        // Lib_DelayMs(5000);
 
         *msg_len = strlen(msg);
     }
@@ -328,6 +330,7 @@ int order_find(order_t *order, char *order_number) {
     if (Lib_FileExist(fname) != FILE_NOTEXIST) {
         fid = Lib_FileOpen(fname, O_RDWR);
         data_len = Lib_FileRead(fid, data, SMS_MESSAGE_LENGTH);
+        Lib_FileClose(fid);
 
         if (data_len > 0) {
             memset(order->bencode, 0, sizeof(order->bencode));
@@ -346,14 +349,12 @@ int order_save(order_t *order) {
     // remove order from all statuses
     remove_order_number(order->number, ORDERS_NEW);
     remove_order_number(order->number, ORDERS_PENDING);
-    remove_order_number(order->number, ORDERS_PICKED_UP);
-    remove_order_number(order->number, ORDERS_DELIVERED);
+    remove_order_number(order->number, ORDERS_COMPLETED);
     
     // add order to correct status
     memset(envname, 0, sizeof(envname));
     if (order->status == 'P') strcpy(envname, ORDERS_NEW); 
-    else if (order->status == 'C' && order->type == 'P') strcpy(envname, ORDERS_PICKED_UP);
-    else if (order->status == 'C' && order->type == 'D') strcpy(envname, ORDERS_DELIVERED);
+    else if (order->status == 'C') strcpy(envname, ORDERS_COMPLETED);
     else strcpy(envname, ORDERS_PENDING);
     
     add_order_number(order->number, envname);
@@ -362,11 +363,12 @@ int order_save(order_t *order) {
     memset(fname, 0, sizeof(fname));
     sprintf(fname, "ORDERS_CS%i", order->number);
 
-    if (Lib_FileExist(fname) != FILE_NOTEXIST) Lib_FileRemove(fname);
+    Lib_FileRemove(fname);
     fid = Lib_FileOpen(fname, O_CREATE);
 
     Lib_FileSeek(fid, 0, FILE_SEEK_SET);
     Lib_FileWrite(fid, (BYTE *)order->bencode, strlen(order->bencode));
+    Lib_FileClose(fid);
 
     return 1;
 }
@@ -378,14 +380,13 @@ int order_delete(order_t *order) {
     // remove order from all statuses
     remove_order_number(order->number, ORDERS_NEW);
     remove_order_number(order->number, ORDERS_PENDING);
-    remove_order_number(order->number, ORDERS_PICKED_UP);
-    remove_order_number(order->number, ORDERS_DELIVERED);
+    remove_order_number(order->number, ORDERS_COMPLETED);
     
     // delete order file
     memset(fname, 0, sizeof(fname));
     sprintf(fname, "ORDERS_CS%i", order->number);
 
-    if (Lib_FileExist(fname) != FILE_NOTEXIST) Lib_FileRemove(fname);
+    Lib_FileRemove(fname);
 
     return 1;
 }

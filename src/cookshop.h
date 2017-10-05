@@ -6,8 +6,7 @@
 
 #define ORDERS_NEW "NEW"
 #define ORDERS_PENDING "PENDNG"
-#define ORDERS_PICKED_UP "PICKUP"
-#define ORDERS_DELIVERED "DELVRD"
+#define ORDERS_COMPLETED "CMPLTD"
 
 typedef struct order_t {
     unsigned long int id;

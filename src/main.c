@@ -29,8 +29,7 @@
 #define STATUS_UNKNOWN    0
 #define STATUS_NEW        1
 #define STATUS_PENDING    2
-#define STATUS_PICKED_UP  3
-#define STATUS_DELIVERED  4
+#define STATUS_COMPLETED  3
 
 const APP_MSG App_Msg = {
 	"COOKSHOP.biz",
@@ -46,24 +45,23 @@ const APP_MSG App_Msg = {
 char *Main_Menu[] = {
     "[1] New orders",
     "[2] Pending orders",
-    "[3] Picked-up orders",
-    "[4] Delivered orders",
-    "[5] Settings",
+    "[3] Completed orders",
+    "[4] Settings",
     NULL
 };
 
 char *New_Order_Menu[] = {
-    "[1] Accept order",
-    "[2] Change order",
-    "[3] Reject order",
-    "[4] Print order",
+    "[1] Print order",
+    "[2] Accept order",
+    "[3] Change order",
+    "[4] Reject order",
     NULL
 };
 
 char *Pending_Order_Menu[] = {
-    "[1] Change order",
-    "[2] Cancel order",
-    "[3] Print order",
+    "[1] Print order",
+    "[2] Change order",
+    "[3] Cancel order",
     NULL
 };
 
@@ -846,8 +844,7 @@ int main(void) {
     memset(envvar, 0, sizeof(envvar));
     if (Lib_FileGetEnv(ORDERS_NEW, envvar)) Lib_FilePutEnv(ORDERS_NEW, "");
     if (Lib_FileGetEnv(ORDERS_PENDING, envvar)) Lib_FilePutEnv(ORDERS_PENDING, "");
-    if (Lib_FileGetEnv(ORDERS_PICKED_UP, envvar)) Lib_FilePutEnv(ORDERS_PICKED_UP, "");
-    if (Lib_FileGetEnv(ORDERS_DELIVERED, envvar)) Lib_FilePutEnv(ORDERS_DELIVERED, "");
+    if (Lib_FileGetEnv(ORDERS_COMPLETED, envvar)) Lib_FilePutEnv(ORDERS_COMPLETED, "");
     
 	while (TRUE) {
         Lib_LcdCls();
@@ -878,15 +875,10 @@ int main(void) {
 				
                 case KEY3:
                     view = VIEW_ORDER_LIST;
-                    status = STATUS_PICKED_UP;
+                    status = STATUS_COMPLETED;
                     break;
 				
 				case KEY4:
-                    view = VIEW_ORDER_LIST;
-                    status = STATUS_DELIVERED;
-                    break;
-				
-				case KEY5:
                     view = VIEW_SETTINGS;
                     break;
 
@@ -911,13 +903,9 @@ int main(void) {
                 strcpy(title, "Pending orders");
                 Lib_FileGetEnv(ORDERS_PENDING, envval);
             }
-			else if (status == STATUS_PICKED_UP) {
-                strcpy(title, "Picked-up");
-                Lib_FileGetEnv(ORDERS_PICKED_UP, envval);
-            }
-			else if (status == STATUS_DELIVERED) {
-                strcpy(title, "Delivered");
-                Lib_FileGetEnv(ORDERS_DELIVERED, envval);
+			else if (status == STATUS_COMPLETED) {
+                strcpy(title, "Completed orders");
+                Lib_FileGetEnv(ORDERS_COMPLETED, envval);
             }
 
             memset(order_list, 0, sizeof(order_list));
@@ -966,34 +954,34 @@ int main(void) {
                 if (status == STATUS_NEW) {
                     switch (View_Menu(New_Order_Menu)) {
                         case KEY1:
+                            Print_Order(&order);
+                            break;
+
+                        case KEY2:
                             if (Display_Confirm("Confirm acceptance\nof this order?", "Yes", "No")) {
                                 remove_order_number(order.number, ORDERS_NEW);
                                 add_order_number(order.number, ORDERS_PENDING);
-                                Display_Notice("Order accepted.");
+                                // Display_Notice("Order accepted.");
                                 view = VIEW_ORDER_LIST;
                             } break;
 
-                        case KEY2:
+                        case KEY3:
                             if (Display_Confirm("Request changes to\nthis order?", "Yes", "No")) {
-                                Display_Notice("Order changes \nrequested.");
                                 // FIXME: Send SMS to request changes
                                 remove_order_number(order.number, ORDERS_NEW);
                                 order_delete(&order);
+                                // Display_Notice("Order changes \nrequested.");
                                 view = VIEW_ORDER_LIST;
                             } break;
-                        
-                        case KEY3:
+
+                        case KEY4:
                             if (Display_Confirm("Confirm rejection of\nthis order?", "Yes", "No")) {
-                                Display_Notice("Order rejected.");
                                 // FIXME: Send SMS to reject order
                                 remove_order_number(order.number, ORDERS_NEW);
                                 order_delete(&order);
+                                // Display_Notice("Order rejected.");
                                 view = VIEW_ORDER_LIST;
                             } break;
-                        
-                        case KEY4:
-                            Print_Order(&order);
-                            break;
 
                         case KEYCANCEL:
                         case KEYBACKSPACE:
@@ -1007,24 +995,27 @@ int main(void) {
                 } else if (status == STATUS_PENDING) {
                     switch (View_Menu(Pending_Order_Menu)) {
                         case KEY1:
+                            Print_Order(&order);
+                            break;
+
+                        case KEY2:
                             if (Display_Confirm("Request changes to\nthis order?", "Yes", "No")) {
-                                Display_Notice("Order changes \nrequested.");
                                 // FIXME: Send SMS to request changes
                                 remove_order_number(order.number, ORDERS_PENDING);
                                 order_delete(&order);
-                                view = VIEW_ORDER_LIST;
-                            } break;
-                        
-                        case KEY2:
-                            if (Display_Confirm("Confirm cancellation\nof this order?", "Yes", "No")) {
-                                Display_Notice("Order cancelled.");
+                                // Display_Notice("Order changes \nrequested.");
                                 view = VIEW_ORDER_LIST;
                             } break;
                         
                         case KEY3:
-                            Print_Order(&order);
-                            break;
-                            
+                            if (Display_Confirm("Confirm cancellation\nof this order?", "Yes", "No")) {
+                                // FIXME: Send SMS to cancel order
+                                remove_order_number(order.number, ORDERS_NEW);
+                                order_delete(&order);
+                                // Display_Notice("Order cancelled.");
+                                view = VIEW_ORDER_LIST;
+                            } break;
+                                                    
                         case KEYCANCEL:
                         case KEYBACKSPACE:
                             view = VIEW_ORDER_LIST;
@@ -1034,7 +1025,7 @@ int main(void) {
                             view = VIEW_ORDER;
                     }
                 
-                } else if (status == STATUS_PICKED_UP || status == STATUS_DELIVERED) {
+                } else if (status == STATUS_COMPLETED) {
                     switch (View_Menu(Non_Pending_Order_Menu)) {
                         case KEY1:
                             Print_Order(&order); 

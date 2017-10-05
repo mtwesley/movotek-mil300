@@ -14,7 +14,7 @@
 #define SMS_MESSAGE_LENGTH  4000
 #define SMS_BUFFER_LENGTH   16000
 
-#define SMS_MESSAGE_LIST "SMSLST"
+#define SMS_MESSAGE_LIST "MSG"
 
 typedef signed char        int8_t;
 typedef short              int16_t;
